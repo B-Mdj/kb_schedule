@@ -4,73 +4,87 @@
       "employees": [
         {
           "id": "e2d6f70c-8811-4df8-930e-1728cfb6695d",
-          "name": "Murungua Erdenebayar",
-          "branch": 1
+          "name": "Мягмарноров",
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "e5155b75-0fc9-438d-b9c0-130eeaeb745a",
-          "name": "ЭНХЖИН 'Э",
-          "branch": 1
+          "name": "Ундрам",
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "a286cd1b-60dd-461b-bf6e-b19285a8d8a7",
-          "name": "Naso Ily",
-          "branch": 1
+          "name": "Э. Энхжин",
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "328c3f59-edfe-42d2-b747-52795cc7f06d",
-          "name": "Ninjin Otgonmunkh",
-          "branch": 1
+          "name": "Мөрөнгуа",
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "cdc7d0a0-6cfa-45e7-bf14-1cd9ef336e1d",
           "name": "Дэлгэрмөрөн",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "a59090d6-7736-4fd9-bf1d-56426ee85d26",
           "name": "Нинжин",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "469f4af3-c7a8-41b1-9090-7d07c334e473",
           "name": "Мягмардорж",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "b12f5f70-5011-4fec-bf8f-28e063e7b41a",
           "name": "Оюумаа",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "b008c5f4-bf06-4a97-8919-9a765fd2071d",
           "name": "Энхзул",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "f24b65f4-8046-4dea-a8e6-47c46626091e",
-          "name": "Энхжин",
-          "branch": 2
+          "name": "Б. Энхжин",
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "8379549f-159c-47e7-a6f1-4b1cc1a49414",
           "name": "Тэмүүлэн",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "8980586a-3c39-4cc1-81e7-654fd8398da8",
           "name": "Цогзолмаа",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "54661b65-d473-405d-a447-3b8bec5cd72a",
           "name": "Халиун",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "32bee6b9-1329-48e8-8f95-e9d940004814",
           "name": "Нарансолонго",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         }
       ],
       "grid": {
@@ -99,7 +113,10 @@
         ],
         "a286cd1b-60dd-461b-bf6e-b19285a8d8a7": [
           {
-            "shift": "О"
+            "shift": "Б"
+          },
+          {
+            "shift": "Ө"
           },
           {
             "shift": "А"
@@ -108,23 +125,17 @@
             "shift": "А"
           },
           {
-            "shift": "О"
-          },
-          {
-            "shift": "О"
-          },
-          {
             "shift": "Б"
           },
           {
-            "shift": "Б"
+            "shift": "Ө"
+          },
+          {
+            "shift": "А"
           }
         ],
         "328c3f59-edfe-42d2-b747-52795cc7f06d": [
           {
-            "shift": "О"
-          },
-          {
             "shift": "А"
           },
           {
@@ -132,15 +143,18 @@
           },
           {
             "shift": "А"
-          },
-          {
-            "shift": "О"
           },
           {
             "shift": "Ө"
           },
           {
             "shift": "О"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "Б"
           }
         ],
         "cdc7d0a0-6cfa-45e7-bf14-1cd9ef336e1d": [
@@ -171,19 +185,19 @@
             "shift": "А"
           },
           {
-            "shift": "А"
+            "shift": "О"
+          },
+          {
+            "shift": "О"
+          },
+          {
+            "shift": "О"
           },
           {
             "shift": "А"
           },
           {
-            "shift": "А"
-          },
-          {
-            "shift": "А"
-          },
-          {
-            "shift": "А"
+            "shift": "О"
           },
           {
             "shift": "А"
@@ -191,7 +205,13 @@
         ],
         "32bee6b9-1329-48e8-8f95-e9d940004814": [
           {
+            "shift": "О"
+          },
+          {
             "shift": "А"
+          },
+          {
+            "shift": "О"
           },
           {
             "shift": "А"
@@ -200,16 +220,10 @@
             "shift": "А"
           },
           {
-            "shift": "А"
+            "shift": "Б"
           },
           {
-            "shift": "А"
-          },
-          {
-            "shift": "А"
-          },
-          {
-            "shift": "А"
+            "shift": "Б"
           }
         ],
         "469f4af3-c7a8-41b1-9090-7d07c334e473": [
@@ -394,7 +408,11 @@
         ],
         "54661b65-d473-405d-a447-3b8bec5cd72a": [
           {
-            "shift": "А",
+            "shift": "О",
+            "prefix": "19"
+          },
+          {
+            "shift": "Б",
             "prefix": "19"
           },
           {
@@ -402,15 +420,11 @@
             "prefix": "19"
           },
           {
-            "shift": "А",
+            "shift": "Б",
             "prefix": "19"
           },
           {
-            "shift": "А",
-            "prefix": "19"
-          },
-          {
-            "shift": "А",
+            "shift": "О",
             "prefix": "19"
           },
           {
@@ -427,16 +441,16 @@
             "shift": "А"
           },
           {
-            "shift": "А"
+            "shift": "О"
+          },
+          {
+            "shift": "О"
           },
           {
             "shift": "А"
           },
           {
-            "shift": "А"
-          },
-          {
-            "shift": "А"
+            "shift": "О"
           },
           {
             "shift": "А"
@@ -446,7 +460,79 @@
           }
         ]
       },
-      "locked": false
+      "locked": false,
+      "requirements": [
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 3
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 3
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        }
+      ]
     },
     "2026-04-13": {
       "employees": [
@@ -635,7 +721,79 @@
           }
         ]
       },
-      "locked": false
+      "locked": false,
+      "requirements": [
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        }
+      ]
     },
     "2026-03-30": {
       "employees": [

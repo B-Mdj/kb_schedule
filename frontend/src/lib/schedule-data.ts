@@ -18,17 +18,29 @@ export type CellData = {
   shift: ShiftCode;
   prefix?: string;
   time?: string;
+  coverageBranch?: 1 | 2;
 };
 
 export type Employee = {
   id: string;
   name: string;
   branch: 1 | 2;
+  canWorkBranch1?: boolean;
 };
 
 export type ScheduleGrid = Record<string, CellData[]>;
 
+export type BranchRequirement = {
+  morning: number;
+  evening: number;
+};
+
 export type DailyRequirement = {
+  branch1: BranchRequirement;
+  branch2: BranchRequirement;
+};
+
+export type LegacyDailyRequirement = {
   morning: number;
   evening: number;
 };
@@ -69,11 +81,66 @@ export function createInitialGrid(employees: Employee[]): ScheduleGrid {
   );
 }
 
+export function normalizeEmployees(employees?: Employee[] | null): Employee[] {
+  return (employees ?? []).map((employee) => ({
+    ...employee,
+    canWorkBranch1: employee.branch === 2 ? Boolean(employee.canWorkBranch1) : false,
+  }));
+}
+
 export function createDefaultRequirements(): WeekRequirements {
   return Array.from({ length: 7 }, () => ({
-    morning: 2,
-    evening: 2,
+    branch1: {
+      morning: 2,
+      evening: 2,
+    },
+    branch2: {
+      morning: 2,
+      evening: 2,
+    },
   }));
+}
+
+export function normalizeWeekRequirements(
+  requirements?: Array<DailyRequirement | LegacyDailyRequirement> | null
+): WeekRequirements {
+  return Array.from({ length: 7 }, (_, index) => {
+    const requirement = requirements?.[index];
+
+    if (
+      requirement &&
+      "branch1" in requirement &&
+      "branch2" in requirement &&
+      requirement.branch1 &&
+      requirement.branch2
+    ) {
+      return {
+        branch1: {
+          morning: Math.max(0, Number(requirement.branch1.morning) || 0),
+          evening: Math.max(0, Number(requirement.branch1.evening) || 0),
+        },
+        branch2: {
+          morning: Math.max(0, Number(requirement.branch2.morning) || 0),
+          evening: Math.max(0, Number(requirement.branch2.evening) || 0),
+        },
+      };
+    }
+
+    if (requirement && "morning" in requirement && "evening" in requirement) {
+      return {
+        branch1: {
+          morning: Math.max(0, Number(requirement.morning) || 0),
+          evening: Math.max(0, Number(requirement.evening) || 0),
+        },
+        branch2: {
+          morning: Math.max(0, Number(requirement.morning) || 0),
+          evening: Math.max(0, Number(requirement.evening) || 0),
+        },
+      };
+    }
+
+    return createDefaultRequirements()[index];
+  });
 }
 
 export function countShifts(cells: CellData[]): number {
@@ -82,6 +149,18 @@ export function countShifts(cells: CellData[]): number {
     if (cell.shift === "Б") return total + 2;
     return total + 1;
   }, 0);
+}
+
+export function countsTowardShift(cell: CellData, shiftType: "morning" | "evening") {
+  const morningShift = SHIFT_ORDER[1];
+  const eveningShift = SHIFT_ORDER[2];
+  const fullDayShift = SHIFT_ORDER[3];
+
+  if (shiftType === "morning") {
+    return cell.shift === morningShift || cell.shift === fullDayShift;
+  }
+
+  return cell.shift === eveningShift || cell.shift === fullDayShift;
 }
 
 export function getShiftClass(shift: ShiftCode): string {

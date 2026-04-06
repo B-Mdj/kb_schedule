@@ -1,24 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { addDays, format } from "date-fns";
-import { ChevronDown, Download, ImagePlus, Loader2, Save, Trash2, WandSparkles } from "lucide-react";
+import Link from "next/link";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { addDays, format, isValid, parseISO } from "date-fns";
+import { Download, Lock, Settings2, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { WeekSelector } from "@/components/app/WeekSelector";
 import { ScheduleGridComponent } from "@/components/app/ScheduleGrid";
 import { ShiftLegend } from "@/components/app/ShiftLegend";
@@ -26,17 +13,14 @@ import {
   createDefaultRequirements,
   INITIAL_EMPLOYEES,
   createInitialGrid,
-  DAYS,
+  normalizeEmployees,
+  normalizeWeekRequirements,
   ShiftCode,
   ScheduleGrid,
   Employee,
   WeekRequirements,
 } from "@/lib/schedule-data";
 import { exportNodeAsPng } from "@/lib/export-as-image";
-import {
-  applyParsedEntriesToSchedule,
-  ParsedSchedulePayload,
-} from "@/lib/schedule-import";
 import { toast } from "sonner";
 
 function getMonday(d: Date): Date {
@@ -52,6 +36,13 @@ function getWeekKey(date: Date) {
   return format(date, "yyyy-MM-dd");
 }
 
+function parseWeekParam(value: string | null) {
+  if (!value) return null;
+  const parsed = parseISO(`${value}T00:00:00`);
+  if (!isValid(parsed)) return null;
+  return getMonday(parsed);
+}
+
 type WeekSchedule = {
   employees: Employee[];
   grid: ScheduleGrid;
@@ -59,21 +50,20 @@ type WeekSchedule = {
   locked: boolean;
 };
 
-type UploadedScreenshot = {
-  id: string;
-  name: string;
-  mimeType: string;
-  dataUrl: string;
-  previewUrl: string;
-};
-
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://127.0.0.1:4000";
 
-export default function Index() {
-  const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
+function SchedulePageClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialWeek = useMemo(
+    () => parseWeekParam(searchParams.get("week")) ?? getMonday(new Date()),
+    [searchParams]
+  );
+
+  const [weekStart, setWeekStart] = useState(initialWeek);
   const [schedulesByWeek, setSchedulesByWeek] = useState<Record<string, WeekSchedule>>(() => {
-    const initialWeekKey = getWeekKey(getMonday(new Date()));
+    const initialWeekKey = getWeekKey(initialWeek);
     return {
       [initialWeekKey]: {
         employees: INITIAL_EMPLOYEES,
@@ -84,12 +74,15 @@ export default function Index() {
     };
   });
   const [isExporting, setIsExporting] = useState(false);
-  const [uploads, setUploads] = useState<UploadedScreenshot[]>([]);
-  const [isReadingUploads, setIsReadingUploads] = useState(false);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
-  const [isRequirementsOpen, setIsRequirementsOpen] = useState(false);
   const scheduleExportRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const requestedWeek = parseWeekParam(searchParams.get("week"));
+    if (requestedWeek && getWeekKey(requestedWeek) !== getWeekKey(weekStart)) {
+      setWeekStart(requestedWeek);
+    }
+  }, [searchParams, weekStart]);
 
   const weekKey = getWeekKey(weekStart);
   const currentSchedule = schedulesByWeek[weekKey] ?? {
@@ -98,13 +91,18 @@ export default function Index() {
     requirements: createDefaultRequirements(),
     locked: false,
   };
-  const employees = currentSchedule.employees;
+  const employees = normalizeEmployees(currentSchedule.employees);
   const grid = currentSchedule.grid;
-  const requirements = currentSchedule.requirements ?? createDefaultRequirements();
+  const requirements = normalizeWeekRequirements(currentSchedule.requirements);
   const locked = currentSchedule.locked;
-  const weekEnd = addDays(weekStart, 6);
-  const targetDayLabels = Array.from({ length: 7 }, (_, index) =>
-    format(addDays(weekStart, index), "yyyy-MM-dd")
+
+  const syncWeekQuery = useCallback(
+    (date: Date) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("week", getWeekKey(date));
+      router.replace(`/?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
   );
 
   useEffect(() => {
@@ -119,7 +117,7 @@ export default function Index() {
         };
 
         if (!response.ok) {
-          throw new Error(payload.error || "Хуваарь татаж чадсангүй.");
+          throw new Error(payload.error || "Failed to load schedules.");
         }
 
         if (!cancelled && payload.schedulesByWeek && Object.keys(payload.schedulesByWeek).length > 0) {
@@ -127,7 +125,7 @@ export default function Index() {
         }
       } catch (error) {
         if (!cancelled) {
-          toast.error(error instanceof Error ? error.message : "Хуваарь татаж чадсангүй.");
+          toast.error(error instanceof Error ? error.message : "Failed to load schedules.");
         }
       } finally {
         if (!cancelled) {
@@ -143,27 +141,37 @@ export default function Index() {
     };
   }, []);
 
-  useEffect(() => {
-    if (isLoadingSchedules) {
-      return;
+  const persistSchedule = useCallback(async (targetWeekKey: string, schedule: WeekSchedule) => {
+    const normalized: WeekSchedule = {
+      ...schedule,
+      employees: normalizeEmployees(schedule.employees),
+      requirements: normalizeWeekRequirements(schedule.requirements),
+    };
+
+    const response = await fetch(`${API_BASE_URL}/api/schedules/${targetWeekKey}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(normalized),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to save schedule.");
     }
+  }, []);
+
+  useEffect(() => {
+    if (isLoadingSchedules) return;
 
     const timeoutId = window.setTimeout(() => {
-      fetch(`${API_BASE_URL}/api/schedules/${weekKey}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(currentSchedule),
-      }).catch(() => {
-        toast.error("Backend дээр хадгалах үед алдаа гарлаа.");
+      void persistSchedule(weekKey, currentSchedule).catch(() => {
+        toast.error("Failed to save schedule to the backend.");
       });
     }, 250);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [currentSchedule, isLoadingSchedules, weekKey]);
+  }, [currentSchedule, isLoadingSchedules, persistSchedule, weekKey]);
 
   const updateCurrentWeek = useCallback(
     (updater: (schedule: WeekSchedule) => WeekSchedule) => {
@@ -177,7 +185,8 @@ export default function Index() {
 
         const normalizedExisting: WeekSchedule = {
           ...existing,
-          requirements: existing.requirements ?? createDefaultRequirements(),
+          employees: normalizeEmployees(existing.employees),
+          requirements: normalizeWeekRequirements(existing.requirements),
         };
 
         return {
@@ -189,50 +198,15 @@ export default function Index() {
     [weekKey]
   );
 
-  const applyImportedEntries = useCallback((entries: ParsedSchedulePayload["entries"]) => {
-    const merged = applyParsedEntriesToSchedule(employees, grid, entries);
-    updateCurrentWeek((schedule) => ({
-      ...schedule,
-      employees: merged.employees,
-      grid: merged.grid,
-    }));
-    toast.success(
-      merged.reviewCount > 0
-        ? `${merged.updatedCount} ажилтан шинэчлэгдэж, ${merged.reviewCount} мөр таараагүй үлдлээ.`
-        : `${merged.updatedCount} ажилтан шинэчлэгдлээ.`
-    );
-  }, [employees, grid, updateCurrentWeek]);
-
-  const handleRequirementChange = useCallback(
-    (dayIndex: number, field: "morning" | "evening", value: number) => {
-      updateCurrentWeek((schedule) => {
-        const nextRequirements = [...schedule.requirements];
-        nextRequirements[dayIndex] = {
-          ...nextRequirements[dayIndex],
-          [field]: Math.max(0, value),
-        };
-
-        return {
-          ...schedule,
-          requirements: nextRequirements,
-        };
-      });
-    },
-    [updateCurrentWeek]
-  );
-
   const handleCellChange = useCallback((empId: string, dayIndex: number, shift: ShiftCode) => {
     updateCurrentWeek((schedule) => {
       const updated = { ...schedule.grid };
       const row = [...updated[empId]];
       const existing = row[dayIndex];
-      row[dayIndex] = { ...existing, shift, time: undefined };
+      row[dayIndex] = { ...existing, shift, time: undefined, coverageBranch: undefined };
       updated[empId] = row;
 
-      return {
-        ...schedule,
-        grid: updated,
-      };
+      return { ...schedule, grid: updated };
     });
   }, [updateCurrentWeek]);
 
@@ -269,14 +243,10 @@ export default function Index() {
       });
       const branchIndex = branchEmployees.findIndex((employee) => employee.id === empId);
 
-      if (branchIndex === -1) {
-        return schedule;
-      }
+      if (branchIndex === -1) return schedule;
 
       const swapIndex = direction === "up" ? branchIndex - 1 : branchIndex + 1;
-      if (swapIndex < 0 || swapIndex >= branchEmployees.length) {
-        return schedule;
-      }
+      if (swapIndex < 0 || swapIndex >= branchEmployees.length) return schedule;
 
       const reorderedBranch = [...branchEmployees];
       const [movedEmployee] = reorderedBranch.splice(branchIndex, 1);
@@ -294,10 +264,7 @@ export default function Index() {
         }
       });
 
-      return {
-        ...schedule,
-        employees: nextEmployees,
-      };
+      return { ...schedule, employees: nextEmployees };
     });
   }, [updateCurrentWeek]);
 
@@ -314,26 +281,17 @@ export default function Index() {
     });
   }, [updateCurrentWeek]);
 
-  const handleSave = useCallback(() => {
-    if (locked) {
-      updateCurrentWeek((schedule) => ({
-        ...schedule,
-        locked: false,
-      }));
-      toast.success("Хуваарь түгжээ тайлагдлаа.");
-      return;
-    }
-
+  const handleLockToggle = useCallback(() => {
     updateCurrentWeek((schedule) => ({
       ...schedule,
-      locked: true,
+      locked: !schedule.locked,
     }));
-    toast.success("Хуваарь хадгалагдаж түгжигдлээ.");
+    toast.success(locked ? "Week unlocked." : "Week locked.");
   }, [locked, updateCurrentWeek]);
 
   const handleExport = useCallback(async () => {
     if (!scheduleExportRef.current) {
-      toast.error("Экспортлох хуваарь олдсонгүй.");
+      toast.error("Could not find the schedule to export.");
       return;
     }
 
@@ -341,295 +299,88 @@ export default function Index() {
     try {
       const filename = `schedule-${format(weekStart, "yyyy-MM-dd")}.png`;
       await exportNodeAsPng(scheduleExportRef.current, filename);
-      toast.success("Зураг амжилттай татагдлаа.");
+      toast.success("Schedule image downloaded.");
     } catch {
-      toast.error("Зураг экспортлох үед алдаа гарлаа.");
+      toast.error("Failed to export schedule image.");
     } finally {
       setIsExporting(false);
     }
   }, [weekStart]);
-
-  const handleUploadFiles = useCallback(async (files: FileList | null) => {
-    if (!files?.length) {
-      return;
-    }
-
-    const nextUploads = await Promise.all(
-      Array.from(files).map(
-        (file) =>
-          new Promise<UploadedScreenshot>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const dataUrl = typeof reader.result === "string" ? reader.result : "";
-              if (!dataUrl) {
-                reject(new Error(`Failed to read ${file.name}`));
-                return;
-              }
-
-              resolve({
-                id: crypto.randomUUID(),
-                name: file.name,
-                mimeType: file.type || "image/png",
-                dataUrl,
-                previewUrl: URL.createObjectURL(file),
-              });
-            };
-            reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
-            reader.readAsDataURL(file);
-          })
-      )
-    );
-
-    setUploads((prev) => [...prev, ...nextUploads]);
-    toast.success(`${nextUploads.length} зураг нэмэгдлээ.`);
-  }, []);
-
-  const handleRemoveUpload = useCallback((uploadId: string) => {
-    setUploads((prev) => {
-      const target = prev.find((upload) => upload.id === uploadId);
-      if (target) {
-        URL.revokeObjectURL(target.previewUrl);
-      }
-      return prev.filter((upload) => upload.id !== uploadId);
-    });
-  }, []);
-
-  const handleClearUploads = useCallback(() => {
-    setUploads((prev) => {
-      prev.forEach((upload) => URL.revokeObjectURL(upload.previewUrl));
-      return [];
-    });
-  }, []);
-
-  const handleAnalyzeUploads = useCallback(async () => {
-    if (locked) {
-      toast.info("Түгжигдсэн долоо хоног дээр зураг уншуулах боломжгүй.");
-      return;
-    }
-
-    if (uploads.length === 0) {
-      toast.info("Эхлээд screenshots-аа оруулна уу.");
-      return;
-    }
-
-    setIsReadingUploads(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/parse-schedule-images`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          weekKey,
-          weekStartIso: format(weekStart, "yyyy-MM-dd"),
-          weekEndIso: format(weekEnd, "yyyy-MM-dd"),
-          dayLabels: targetDayLabels,
-          employeeNames: employees.map((employee) => employee.name),
-          dailyRequirements: requirements.map((item, index) => ({
-            date: targetDayLabels[index],
-            morning: item.morning,
-            evening: item.evening,
-          })),
-          allowFallbackAssignment: false,
-          images: uploads.map((upload) => ({
-            name: upload.name,
-            mimeType: upload.mimeType,
-            dataUrl: upload.dataUrl,
-          })),
-        }),
-      });
-
-      const payload = (await response.json()) as ParsedSchedulePayload & { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error || "AI уншилт амжилтгүй боллоо.");
-      }
-
-      if (!payload.entries?.length) {
-        throw new Error("Зурагнаас ээлжийн мэдээлэл олдсонгүй.");
-      }
-
-      applyImportedEntries(payload.entries);
-      handleClearUploads();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "AI уншилт амжилтгүй боллоо.");
-    } finally {
-      setIsReadingUploads(false);
-    }
-  }, [applyImportedEntries, employees, handleClearUploads, locked, requirements, targetDayLabels, uploads, weekEnd, weekKey, weekStart]);
 
   const handleWeekChange = useCallback((offset: number) => {
     const nextWeekStart = addDays(weekStart, offset);
     const nextWeekKey = getWeekKey(nextWeekStart);
 
     setSchedulesByWeek((prev) => {
-      if (prev[nextWeekKey]) {
-        return prev;
-      }
+      if (prev[nextWeekKey]) return prev;
 
       return {
         ...prev,
         [nextWeekKey]: {
           employees: employees.map((employee) => ({ ...employee })),
           grid: createInitialGrid(employees),
-          requirements: requirements.map((item) => ({ ...item })),
+          requirements: createDefaultRequirements(),
           locked: false,
         },
       };
     });
 
     setWeekStart(nextWeekStart);
-  }, [employees, requirements, weekStart]);
+    syncWeekQuery(nextWeekStart);
+  }, [employees, syncWeekQuery, weekStart]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top bar */}
-      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-bold tracking-tight">🐨 Ээлжийн хуваарь</h1>
+      <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <h1 className="text-lg font-bold tracking-tight">🐨 KB Хуваарь</h1>
             <WeekSelector
               weekStart={weekStart}
               onPrev={() => handleWeekChange(-7)}
               onNext={() => handleWeekChange(7)}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              multiple
-              className="hidden"
-              onChange={(event) => {
-                void handleUploadFiles(event.target.files);
-                event.target.value = "";
-              }}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  disabled={locked}
-                >
-                  <ImagePlus className="w-3.5 h-3.5" />
-                  Screenshots
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Screenshot Actions</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                  <ImagePlus className="w-4 h-4" />
-                  Add Screenshots
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => void handleAnalyzeUploads()}
-                  disabled={uploads.length === 0 || isReadingUploads}
-                >
-                  {isReadingUploads ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <WandSparkles className="w-4 h-4" />
-                  )}
-                  AI Read Screenshots
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsRequirementsOpen(true)}>
-                  <WandSparkles className="w-4 h-4" />
-                  Staffing Requirements
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleClearUploads}
-                  disabled={uploads.length === 0}
-                  variant="destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Clear Queue
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex items-center justify-end gap-2">
             <Button
               variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={handleExport}
-              disabled={isExporting}
+              size="icon-sm"
+              asChild
+              aria-label="Хүний нөөцийн хуудас"
+              title="Хүний нөөцийн хуудас"
             >
-              <Download className="w-3.5 h-3.5" />
-              {isExporting ? "Экспортлож байна" : "Зураг болгох"}
+              <Link href={`/staffing?week=${weekKey}`}>
+                <Settings2 className="h-3.5 w-3.5" />
+              </Link>
             </Button>
             <Button
-              size="sm"
-              className="gap-1.5"
-              onClick={handleSave}
+              variant="outline"
+              size="icon-sm"
+              onClick={handleExport}
+              disabled={isExporting}
+              aria-label={isExporting ? "Хуваарь экспортлож байна" : "Хуваарь экспортлох"}
+              title={isExporting ? "Хуваарь экспортлож байна" : "Хуваарь экспортлох"}
             >
-              <Save className="w-3.5 h-3.5" />
-              {locked ? "Тайлах" : "Хадгалах"}
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant={locked ? "default" : "outline"}
+              size="icon-sm"
+              onClick={handleLockToggle}
+              aria-label={locked ? "Хуваарийн түгжээ тайлах" : "Хуваарь түгжих"}
+              title={locked ? "Хуваарийн түгжээ тайлах" : "Хуваарь түгжих"}
+            >
+              {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-        <Dialog open={isRequirementsOpen} onOpenChange={setIsRequirementsOpen}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Daily Staffing Requirements</DialogTitle>
-              <DialogDescription>
-                Morning and evening headcount targets for this week.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7">
-              {requirements.map((requirement, index) => (
-                <div key={targetDayLabels[index]} className="rounded-xl border border-border bg-background p-3">
-                  <div className="mb-2">
-                    <p className="text-sm font-semibold">{DAYS[index]}</p>
-                    <p className="text-xs text-muted-foreground">{targetDayLabels[index]}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="flex items-center justify-between gap-2 text-xs">
-                      <span>Өглөө</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={requirement.morning}
-                        disabled={locked}
-                        onChange={(event) =>
-                          handleRequirementChange(index, "morning", Number(event.target.value))
-                        }
-                        className="w-16 rounded-md border border-border bg-background px-2 py-1 text-right"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between gap-2 text-xs">
-                      <span>Орой</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={requirement.evening}
-                        disabled={locked}
-                        onChange={(event) =>
-                          handleRequirementChange(index, "evening", Number(event.target.value))
-                        }
-                        className="w-16 rounded-md border border-border bg-background px-2 py-1 text-right"
-                      />
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <div
-          ref={scheduleExportRef}
-          className="rounded-2xl bg-background px-1 py-1"
-        >
+      <main className="mx-auto max-w-6xl space-y-4 px-3 py-4 sm:px-4 sm:py-6">
+        <div ref={scheduleExportRef} className="rounded-2xl bg-background px-1 py-1">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold tracking-tight">KB Schedule</h2>
+              <h2 className="text-xl font-bold tracking-tight">KB Хуваарь</h2>
               <p className="text-sm text-muted-foreground">
                 {format(weekStart, "yyyy.MM.dd")} - {format(addDays(weekStart, 6), "yyyy.MM.dd")}
               </p>
@@ -640,7 +391,8 @@ export default function Index() {
             <ScheduleGridComponent
               employees={employees}
               grid={grid}
-              locked={locked}
+              requirements={requirements}
+              locked={locked || isLoadingSchedules}
               onCellChange={handleCellChange}
               onNameChange={handleNameChange}
               onAddEmployee={handleAddEmployee}
@@ -651,5 +403,13 @@ export default function Index() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Index() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <SchedulePageClient />
+    </Suspense>
   );
 }

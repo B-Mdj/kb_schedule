@@ -13,10 +13,21 @@ export type ParseScheduleImagesRequest = {
   weekEndIso?: string;
   dayLabels?: string[];
   employeeNames?: string[];
+  employeeDirectory?: Array<{
+    name: string;
+    branch: 1 | 2;
+    canWorkBranch1?: boolean;
+  }>;
   dailyRequirements?: Array<{
     date: string;
-    morning: number;
-    evening: number;
+    branch1: {
+      morning: number;
+      evening: number;
+    };
+    branch2: {
+      morning: number;
+      evening: number;
+    };
   }>;
   allowFallbackAssignment?: boolean;
 };
@@ -25,6 +36,8 @@ export type ParsedScheduleEntry = {
   employeeName: string;
   branch: 1 | 2 | null;
   shifts: ShiftCode[];
+  times?: Array<string | undefined>;
+  coverageBranches?: Array<1 | 2 | undefined>;
   notes: string;
   confidence: "high" | "medium" | "low";
 };
@@ -37,19 +50,32 @@ export type Employee = {
   id: string;
   name: string;
   branch: 1 | 2;
+  canWorkBranch1?: boolean;
 };
 
 export type CellData = {
   shift: ShiftCode;
   prefix?: string;
   time?: string;
+  coverageBranch?: 1 | 2;
 };
 
 export type ScheduleGrid = Record<string, CellData[]>;
 
+export type BranchRequirement = {
+  morning: number;
+  evening: number;
+};
+
+export type DailyRequirement = {
+  branch1: BranchRequirement;
+  branch2: BranchRequirement;
+};
+
 export type WeekSchedule = {
   employees: Employee[];
   grid: ScheduleGrid;
+  requirements?: DailyRequirement[];
   locked: boolean;
 };
 

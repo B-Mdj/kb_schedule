@@ -1,9 +1,11 @@
-import { Employee, ScheduleGrid, ShiftCode } from "@/lib/schedule-data";
+import { CellData, Employee, ScheduleGrid } from "@/lib/schedule-data";
 
 export type ParsedScheduleEntry = {
   employeeName: string;
   branch: 1 | 2 | null;
-  shifts: ShiftCode[];
+  shifts: CellData["shift"][];
+  times?: Array<string | undefined>;
+  coverageBranches?: Array<1 | 2 | undefined>;
   notes?: string;
   confidence?: "high" | "medium" | "low";
   sourceImageName?: string;
@@ -23,10 +25,17 @@ function normalizeName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function createWeekRow(branch: 1 | 2, shifts: ShiftCode[]) {
+function createWeekRow(
+  branch: 1 | 2,
+  shifts: ParsedScheduleEntry["shifts"],
+  times?: ParsedScheduleEntry["times"],
+  coverageBranches?: ParsedScheduleEntry["coverageBranches"]
+) {
   return Array.from({ length: 7 }, (_, index) => ({
     shift: shifts[index] ?? "А",
     prefix: branch === 2 ? "19" : undefined,
+    time: times?.[index],
+    coverageBranch: coverageBranches?.[index],
   }));
 }
 
@@ -54,7 +63,12 @@ export function applyParsedEntriesToSchedule(
     );
 
     if (matchedEmployee) {
-      nextGrid[matchedEmployee.id] = createWeekRow(matchedEmployee.branch, entry.shifts);
+      nextGrid[matchedEmployee.id] = createWeekRow(
+        matchedEmployee.branch,
+        entry.shifts,
+        entry.times,
+        entry.coverageBranches
+      );
       usedEmployeeIds.add(matchedEmployee.id);
       updatedCount += 1;
       return;
@@ -72,7 +86,12 @@ export function applyParsedEntriesToSchedule(
       if (entry.branch != null) {
         reusableEmployee.branch = branch;
       }
-      nextGrid[reusableEmployee.id] = createWeekRow(reusableEmployee.branch, entry.shifts);
+      nextGrid[reusableEmployee.id] = createWeekRow(
+        reusableEmployee.branch,
+        entry.shifts,
+        entry.times,
+        entry.coverageBranches
+      );
       usedEmployeeIds.add(reusableEmployee.id);
       updatedCount += 1;
       return;

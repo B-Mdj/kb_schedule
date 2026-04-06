@@ -2,11 +2,13 @@
 
 import { useState, useMemo } from "react";
 import {
+  countsTowardShift,
   Employee,
   ScheduleGrid as GridType,
   DAYS,
   DAYS_FULL,
   ShiftCode,
+  WeekRequirements,
   countShifts,
 } from "@/lib/schedule-data";
 import { ShiftCell } from "./ShiftCell";
@@ -28,6 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 interface Props {
   employees: Employee[];
   grid: GridType;
+  requirements: WeekRequirements;
   onCellChange: (empId: string, dayIndex: number, shift: ShiftCode) => void;
   onNameChange: (empId: string, newName: string) => void;
   onAddEmployee: (branch: 1 | 2) => void;
@@ -38,7 +41,7 @@ interface Props {
 
 const MIN_SHIFTS = 4;
 
-export function ScheduleGridComponent({ employees, grid, onCellChange, onNameChange, onAddEmployee, onMoveEmployee, onRemoveEmployee, locked = false }: Props) {
+export function ScheduleGridComponent({ employees, grid, requirements, onCellChange, onNameChange, onAddEmployee, onMoveEmployee, onRemoveEmployee, locked = false }: Props) {
   const [editingName, setEditingName] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
 
@@ -53,6 +56,88 @@ export function ScheduleGridComponent({ employees, grid, onCellChange, onNameCha
     return counts;
   }, [employees, grid]);
 
+  const shortagesByBranch = useMemo(() => {
+    return {
+      1: requirements.map((requirement, dayIndex) => {
+        let assignedMorning = 0;
+        let assignedEvening = 0;
+
+        employees.forEach((employee) => {
+          const cell = grid[employee.id]?.[dayIndex];
+          if (!cell) return;
+
+          const effectiveBranch = cell.coverageBranch ?? employee.branch;
+          if (effectiveBranch !== 1) return;
+
+          if (countsTowardShift(cell, "morning")) assignedMorning += 1;
+          if (countsTowardShift(cell, "evening")) assignedEvening += 1;
+        });
+
+        return {
+          dayLabel: DAYS[dayIndex],
+          morning: Math.max(0, requirement.branch1.morning - assignedMorning),
+          evening: Math.max(0, requirement.branch1.evening - assignedEvening),
+        };
+      }),
+      2: requirements.map((requirement, dayIndex) => {
+        let assignedMorning = 0;
+        let assignedEvening = 0;
+
+        employees.forEach((employee) => {
+          const cell = grid[employee.id]?.[dayIndex];
+          if (!cell) return;
+
+          const effectiveBranch = cell.coverageBranch ?? employee.branch;
+          if (effectiveBranch !== 2) return;
+
+          if (countsTowardShift(cell, "morning")) assignedMorning += 1;
+          if (countsTowardShift(cell, "evening")) assignedEvening += 1;
+        });
+
+        return {
+          dayLabel: DAYS[dayIndex],
+          morning: Math.max(0, requirement.branch2.morning - assignedMorning),
+          evening: Math.max(0, requirement.branch2.evening - assignedEvening),
+        };
+      }),
+    } as const;
+  }, [employees, grid, requirements]);
+
+  const renderShortages = (branch: 1 | 2) => {
+    const items = shortagesByBranch[branch].flatMap((day) => {
+      const results: string[] = [];
+      if (day.morning > 0) {
+        results.push(`${day.dayLabel} өглөө ${day.morning}`);
+      }
+      if (day.evening > 0) {
+        results.push(`${day.dayLabel} орой ${day.evening}`);
+      }
+      return results;
+    });
+
+    return (
+      <div className="border-t border-border bg-muted/30 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Дутуу байгаа ээлж
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {items.length > 0 ? (
+            items.map((item) => (
+              <span
+                key={`${branch}-${item}`}
+                className="rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-900"
+              >
+                {item}
+              </span>
+            ))
+          ) : (
+            <span className="text-sm text-muted-foreground">Одоогоор дутуу ээлж алга.</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderRow = (emp: Employee, empIdx: number, branchEmployees: Employee[]) => {
     const count = shiftCounts[emp.id];
     const branchIndex = branchEmployees.findIndex((employee) => employee.id === emp.id);
@@ -62,17 +147,17 @@ export function ScheduleGridComponent({ employees, grid, onCellChange, onNameCha
       <div
         key={emp.id}
         className={cn(
-          "group grid grid-cols-[220px_repeat(7,1fr)_60px] border-b border-border last:border-b-0",
+          "group grid grid-cols-[160px_repeat(7,minmax(2.75rem,1fr))_48px] border-b border-border last:border-b-0 sm:grid-cols-[220px_repeat(7,1fr)_60px]",
           "animate-fade-in"
         )}
         style={{ animationDelay: `${empIdx * 40}ms`, animationFillMode: "backwards" }}
       >
         {/* Name - editable */}
-        <div className="p-3 flex items-start gap-1 sticky left-0 bg-card z-10 border-r border-border">
+        <div className="sticky left-0 z-10 flex items-start gap-1 border-r border-border bg-card p-2 sm:p-3">
           {!locked && editingName === emp.id ? (
             <input
               autoFocus
-              className="font-medium text-sm w-full bg-transparent border-b border-primary outline-none"
+              className="w-full border-b border-primary bg-transparent text-xs font-medium outline-none sm:text-sm"
               defaultValue={emp.name}
               onBlur={(e) => {
                 onNameChange(emp.id, e.target.value || emp.name);
@@ -89,7 +174,7 @@ export function ScheduleGridComponent({ employees, grid, onCellChange, onNameCha
             <>
               <span
                 className={cn(
-                  "font-medium text-sm leading-snug whitespace-normal break-words flex-1 transition-colors",
+                  "flex-1 break-words text-xs leading-snug whitespace-normal font-medium transition-colors sm:text-sm",
                   !locked && "cursor-pointer hover:text-primary"
                 )}
                 onClick={() => !locked && setEditingName(emp.id)}
@@ -131,7 +216,7 @@ export function ScheduleGridComponent({ employees, grid, onCellChange, onNameCha
         {/* Cells */}
         {(grid[emp.id] || []).map((cell, dayIdx) => {
           return (
-            <div key={`${emp.id}-${dayIdx}`} className="p-1.5">
+            <div key={`${emp.id}-${dayIdx}`} className="p-1 sm:p-1.5">
               <ShiftCell
                 data={cell}
                 disabled={locked}
@@ -142,8 +227,8 @@ export function ScheduleGridComponent({ employees, grid, onCellChange, onNameCha
         })}
 
         {/* Shift count */}
-        <div className="p-3 flex items-center justify-center">
-          <span className="text-sm font-bold rounded-full w-8 h-8 flex items-center justify-center bg-accent text-accent-foreground">
+        <div className="flex items-center justify-center p-2 sm:p-3">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground sm:h-8 sm:w-8 sm:text-sm">
             {count}
           </span>
         </div>
@@ -155,26 +240,26 @@ export function ScheduleGridComponent({ employees, grid, onCellChange, onNameCha
     <div className="space-y-4">
       {/* Branch 1 */}
       <div className="overflow-auto rounded-xl border border-border bg-card shadow-sm">
-        <div className="min-w-175">
+        <div className="min-w-[40rem] sm:min-w-[48rem]">
           <div className="px-4 py-2 bg-muted/50 border-b border-border">
             <span className="text-sm font-semibold text-muted-foreground">Салбар 1</span>
           </div>
           {/* Header */}
-          <div className="grid grid-cols-[220px_repeat(7,1fr)_60px] sticky top-0 z-20 bg-card border-b border-border">
-            <div className="p-3 font-semibold text-sm text-muted-foreground sticky left-0 bg-card z-30 flex items-center">
+          <div className="sticky top-0 z-20 grid grid-cols-[160px_repeat(7,minmax(2.75rem,1fr))_48px] border-b border-border bg-card sm:grid-cols-[220px_repeat(7,1fr)_60px]">
+            <div className="sticky left-0 z-30 flex items-center bg-card p-2 text-xs font-semibold text-muted-foreground sm:p-3 sm:text-sm">
               Ажилтан
             </div>
             {DAYS.map((d, i) => (
               <Tooltip key={d}>
                 <TooltipTrigger asChild>
-                  <div className="p-3 text-center font-semibold text-sm text-muted-foreground">
+                  <div className="p-2 text-center text-xs font-semibold text-muted-foreground sm:p-3 sm:text-sm">
                     {d}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">{DAYS_FULL[i]}</TooltipContent>
               </Tooltip>
             ))}
-            <div className="p-3 text-center font-semibold text-xs text-muted-foreground">
+            <div className="p-2 text-center text-[10px] font-semibold text-muted-foreground sm:p-3 sm:text-xs">
               Ээлж
             </div>
           </div>
@@ -189,30 +274,31 @@ export function ScheduleGridComponent({ employees, grid, onCellChange, onNameCha
               </button>
             </div>
           )}
+          {renderShortages(1)}
         </div>
       </div>
 
       {/* Branch 2 */}
       <div className="overflow-auto rounded-xl border border-border bg-card shadow-sm">
-        <div className="min-w-175">
+        <div className="min-w-[40rem] sm:min-w-[48rem]">
           <div className="px-4 py-2 bg-muted/50 border-b border-border">
             <span className="text-sm font-semibold text-muted-foreground">Салбар 2</span>
           </div>
-          <div className="grid grid-cols-[220px_repeat(7,1fr)_60px] sticky top-0 z-20 bg-card border-b border-border">
-            <div className="p-3 font-semibold text-sm text-muted-foreground sticky left-0 bg-card z-30 flex items-center">
+          <div className="sticky top-0 z-20 grid grid-cols-[160px_repeat(7,minmax(2.75rem,1fr))_48px] border-b border-border bg-card sm:grid-cols-[220px_repeat(7,1fr)_60px]">
+            <div className="sticky left-0 z-30 flex items-center bg-card p-2 text-xs font-semibold text-muted-foreground sm:p-3 sm:text-sm">
               Ажилтан
             </div>
             {DAYS.map((d, i) => (
               <Tooltip key={d}>
                 <TooltipTrigger asChild>
-                  <div className="p-3 text-center font-semibold text-sm text-muted-foreground">
+                  <div className="p-2 text-center text-xs font-semibold text-muted-foreground sm:p-3 sm:text-sm">
                     {d}
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="text-xs">{DAYS_FULL[i]}</TooltipContent>
               </Tooltip>
             ))}
-            <div className="p-3 text-center font-semibold text-xs text-muted-foreground">
+            <div className="p-2 text-center text-[10px] font-semibold text-muted-foreground sm:p-3 sm:text-xs">
               Ээлж
             </div>
           </div>
@@ -227,6 +313,7 @@ export function ScheduleGridComponent({ employees, grid, onCellChange, onNameCha
               </button>
             </div>
           )}
+          {renderShortages(2)}
         </div>
       </div>
 

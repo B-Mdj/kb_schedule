@@ -43,6 +43,11 @@ export function ShiftCell({ data, onChange, disabled = false }: ShiftCellProps) 
             animating && "animate-cell-pop"
           )}
         >
+          {data.coverageBranch && (
+            <span className="absolute left-1.5 top-1.5 rounded bg-black/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide">
+              S{data.coverageBranch}
+            </span>
+          )}
           <span className="text-lg font-bold">{displayText}</span>
           {data.time && (
             <span className="text-[10px] font-normal opacity-70 mt-0.5">{data.time}</span>
