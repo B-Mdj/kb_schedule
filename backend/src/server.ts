@@ -2,7 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express, { Request, Response } from "express";
 import { parseScheduleImages } from "./gemini";
-import { readSchedules, writeSchedules } from "./storage";
+import { readSchedules, upsertWeekSchedule } from "./storage";
 import {
   ParseScheduleImagesRequest,
   StoredSchedules,
@@ -35,14 +35,24 @@ app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
-app.get("/api/schedules", (_req: Request, res: Response<StoredSchedules>) => {
-  const stored = readSchedules();
-  res.json(stored);
+app.get("/api/schedules", async (_req: Request, res: Response<StoredSchedules>) => {
+  try {
+    const stored = await readSchedules();
+    res.json(stored);
+  } catch (error) {
+    res.status(500).json({
+      schedulesByWeek: {},
+      error: error instanceof Error ? error.message : "Failed to load schedules.",
+    } as StoredSchedules & { error: string });
+  }
 });
 
 app.put(
   "/api/schedules/:weekKey",
-  (req: Request<{ weekKey: string }, { ok?: boolean; weekKey?: string; error?: string }, WeekSchedule>, res: Response) => {
+  async (
+    req: Request<{ weekKey: string }, { ok?: boolean; weekKey?: string; error?: string }, WeekSchedule>,
+    res: Response
+  ) => {
     const { weekKey } = req.params;
     const schedule = req.body;
 
@@ -51,17 +61,14 @@ app.put(
       return;
     }
 
-    const stored = readSchedules();
-    const next: StoredSchedules = {
-      ...stored,
-      schedulesByWeek: {
-        ...(stored.schedulesByWeek || {}),
-        [weekKey]: schedule,
-      },
-    };
-
-    writeSchedules(next);
-    res.json({ ok: true, weekKey });
+    try {
+      await upsertWeekSchedule(weekKey, schedule);
+      res.json({ ok: true, weekKey });
+    } catch (error) {
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to save schedule.",
+      });
+    }
   }
 );
 

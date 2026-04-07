@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { WeekSelector } from "@/components/app/WeekSelector";
 import { ScheduleGridComponent } from "@/components/app/ScheduleGrid";
 import { ShiftLegend } from "@/components/app/ShiftLegend";
+import { API_BASE_URL } from "@/lib/api-base-url";
 import {
   createDefaultRequirements,
   INITIAL_EMPLOYEES,
@@ -49,9 +50,6 @@ type WeekSchedule = {
   requirements: WeekRequirements;
   locked: boolean;
 };
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://127.0.0.1:4000";
 
 function SchedulePageClient() {
   const router = useRouter();

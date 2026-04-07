@@ -539,32 +539,38 @@
         {
           "id": "b2-1",
           "name": "Сараа",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "b2-2",
           "name": "Төгс",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "c7d1b47e-7ea9-4e03-a47c-8a5d25037308",
           "name": "Murungua Erdenebayar",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "35ca69d2-f008-499e-beaa-53f9eb2f5c8b",
           "name": "ЭНХЖИН 'Э",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "0edf8f74-bd26-42ca-94ca-8c564429c061",
           "name": "Naso Ily",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "f407c644-72a5-46fd-af97-3357089ecb31",
           "name": "Ninjin Otgonmunkh",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         }
       ],
       "grid": {
