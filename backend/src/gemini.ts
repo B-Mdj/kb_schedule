@@ -38,9 +38,13 @@ type ExtractionResult = {
 };
 
 type SchedulingResult = {
-  start_times?: Record<string, Record<string, string | null>>;
-  coverage_branches?: Record<string, Record<string, 1 | 2 | null>>;
-  final_schedule?: Record<string, Record<string, "А" | "Ө" | "О" | "Б">>;
+  assignments?: Array<{
+    employee_name?: string;
+    date?: string;
+    shift?: "А" | "Ө" | "О" | "Б";
+    start_time?: string | null;
+    coverage_branch?: 1 | 2 | "1" | "2" | null;
+  }>;
   summary?: {
     total_assigned_per_employee?: Record<string, number>;
   };
@@ -189,6 +193,20 @@ function normalizeExtractionRequests(
         ) as Record<string, RequestDay>,
       }))
     : [];
+}
+
+function buildEmptyScheduleMaps(employeeNames: string[], dayLabels: string[]) {
+  return {
+    finalSchedule: Object.fromEntries(
+      employeeNames.map((name) => [name, Object.fromEntries(dayLabels.map((day) => [day, "А"]))])
+    ) as Record<string, Record<string, "А" | "Ө" | "О" | "Б">>,
+    startTimes: Object.fromEntries(
+      employeeNames.map((name) => [name, Object.fromEntries(dayLabels.map((day) => [day, null]))])
+    ) as Record<string, Record<string, string | null>>,
+    coverageBranches: Object.fromEntries(
+      employeeNames.map((name) => [name, Object.fromEntries(dayLabels.map((day) => [day, null]))])
+    ) as Record<string, Record<string, 1 | 2 | null>>,
+  };
 }
 
 export async function parseScheduleImages(
@@ -425,8 +443,9 @@ export async function parseScheduleImages(
     "Only use the structured requests provided.",
     "Always satisfy staffing requirements first, then optimize fairness.",
     "OUTPUT FORMAT",
-    "Return parallel maps for final_schedule, start_times, and coverage_branches using the same employee names and dates.",
-    'Return JSON only like {"final_schedule":{"Нарансолонго":{"2026-04-06":"А"}},"summary":{"total_assigned_per_employee":{"Нарансолонго":3}},"review":[]}.',
+    "Return an assignments array with one item per employee per date.",
+    "Each assignment item must include employee_name, date, shift, start_time, and coverage_branch.",
+    'Return JSON only like {"assignments":[{"employee_name":"Нарансолонго","date":"2026-04-06","shift":"А","start_time":null,"coverage_branch":null}],"summary":{"total_assigned_per_employee":{"Нарансолонго":3}},"review":[]}.',
   ]
     .filter(Boolean)
     .join("\n");
@@ -434,65 +453,25 @@ export async function parseScheduleImages(
   const schedulerSchema = {
     type: "OBJECT",
     properties: {
-      final_schedule: {
-        type: "OBJECT",
-        properties: Object.fromEntries(
-          (options.employeeNames ?? employeeDirectory.map((employee) => employee.name)).map((name) => [
-            name,
-            {
-              type: "OBJECT",
-              properties: Object.fromEntries(
-                dayLabels.map((day) => [day, { type: "STRING", enum: ["А", "Ө", "О", "Б"] }])
-              ),
-              required: dayLabels,
-            },
-          ])
-        ),
-      },
-      start_times: {
-        type: "OBJECT",
-        properties: Object.fromEntries(
-          (options.employeeNames ?? employeeDirectory.map((employee) => employee.name)).map((name) => [
-            name,
-            {
-              type: "OBJECT",
-              properties: Object.fromEntries(
-                dayLabels.map((day) => [day, { type: "STRING", nullable: true }])
-              ),
-              required: dayLabels,
-            },
-          ])
-        ),
-      },
-      coverage_branches: {
-        type: "OBJECT",
-        properties: Object.fromEntries(
-          (options.employeeNames ?? employeeDirectory.map((employee) => employee.name)).map((name) => [
-            name,
-            {
-              type: "OBJECT",
-              properties: Object.fromEntries(
-                dayLabels.map((day) => [
-                  day,
-                  { anyOf: [{ type: "INTEGER", enum: [1, 2] }, { type: "NULL" }] },
-                ])
-              ),
-              required: dayLabels,
-            },
-          ])
-        ),
+      assignments: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            employee_name: { type: "STRING" },
+            date: { type: "STRING" },
+            shift: { type: "STRING", enum: ["А", "Ө", "О", "Б"] },
+            start_time: { type: "STRING", nullable: true },
+            coverage_branch: { type: "STRING", enum: ["1", "2"], nullable: true },
+          },
+          required: ["employee_name", "date", "shift", "start_time", "coverage_branch"],
+        },
       },
       summary: {
         type: "OBJECT",
         properties: {
           total_assigned_per_employee: {
             type: "OBJECT",
-            properties: Object.fromEntries(
-              (options.employeeNames ?? employeeDirectory.map((employee) => employee.name)).map((name) => [
-                name,
-                { type: "NUMBER" },
-              ])
-            ),
           },
         },
         required: ["total_assigned_per_employee"],
@@ -511,7 +490,7 @@ export async function parseScheduleImages(
         },
       },
     },
-    required: ["final_schedule", "start_times", "coverage_branches", "summary", "review"],
+    required: ["assignments", "summary", "review"],
   };
 
   const scheduled = await callGeminiJson<SchedulingResult>({
@@ -525,8 +504,41 @@ export async function parseScheduleImages(
     ...(scheduled.review ?? []).map((item) => item.message ?? item.type ?? "review"),
   ].filter(Boolean);
 
+  const employeeNames = options.employeeNames ?? employeeDirectory.map((employee) => employee.name);
+  const scheduleMaps = buildEmptyScheduleMaps(employeeNames, dayLabels);
+
+  for (const assignment of scheduled.assignments ?? []) {
+    const employeeName = typeof assignment.employee_name === "string" ? assignment.employee_name : "";
+    const day = typeof assignment.date === "string" ? assignment.date : "";
+    const shift = assignment.shift;
+
+    if (!employeeName || !day || !dayLabels.includes(day)) {
+      continue;
+    }
+
+    if (!scheduleMaps.finalSchedule[employeeName]) {
+      scheduleMaps.finalSchedule[employeeName] = Object.fromEntries(
+        dayLabels.map((label) => [label, "А"])
+      ) as Record<string, "А" | "Ө" | "О" | "Б">;
+      scheduleMaps.startTimes[employeeName] = Object.fromEntries(
+        dayLabels.map((label) => [label, null])
+      ) as Record<string, string | null>;
+      scheduleMaps.coverageBranches[employeeName] = Object.fromEntries(
+        dayLabels.map((label) => [label, null])
+      ) as Record<string, 1 | 2 | null>;
+    }
+
+    if (shift === "А" || shift === "Ө" || shift === "О" || shift === "Б") {
+      scheduleMaps.finalSchedule[employeeName][day] = shift;
+    }
+
+    scheduleMaps.startTimes[employeeName][day] =
+      typeof assignment.start_time === "string" ? assignment.start_time : null;
+    scheduleMaps.coverageBranches[employeeName][day] = normalizeBranch(assignment.coverage_branch);
+  }
+
   return {
-    entries: Object.entries(scheduled.final_schedule ?? {}).map(([employeeName, days]) => {
+    entries: Object.entries(scheduleMaps.finalSchedule).map(([employeeName, days]) => {
       const extractedRequest = normalizedRequests.find((request) => request.employee_name === employeeName);
       const branch =
         branchByName.get(employeeName) ??
@@ -535,10 +547,11 @@ export async function parseScheduleImages(
 
       return {
         employeeName,
-        times: dayLabels.map((day) => scheduled.start_times?.[employeeName]?.[day] ?? undefined),
+        times: dayLabels.map((day) => scheduleMaps.startTimes?.[employeeName]?.[day] ?? undefined),
         coverageBranches: dayLabels.map((day) => {
-          const value = scheduled.coverage_branches?.[employeeName]?.[day];
-          return value === 1 || value === 2 ? value : undefined;
+          const value = scheduleMaps.coverageBranches?.[employeeName]?.[day];
+          const normalizedCoverageBranch = normalizeBranch(value);
+          return normalizedCoverageBranch ?? undefined;
         }),
         branch,
         shifts: dayLabels.map((day) => days?.[day] ?? "А"),

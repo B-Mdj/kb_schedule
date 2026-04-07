@@ -8,6 +8,7 @@ import { ArrowLeft, ImagePlus, Loader2, Trash2, WandSparkles } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WeekSelector } from "@/components/app/WeekSelector";
+import { API_BASE_URL } from "@/lib/api-base-url";
 import {
   createDefaultRequirements,
   DAYS,
@@ -59,9 +60,6 @@ type UploadedScreenshot = {
   dataUrl: string;
   previewUrl: string;
 };
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://127.0.0.1:4000";
 
 function StaffingPageClient() {
   const router = useRouter();
