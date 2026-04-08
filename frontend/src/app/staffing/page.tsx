@@ -8,6 +8,7 @@ import { ArrowLeft, ImagePlus, Loader2, Trash2, WandSparkles } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WeekSelector } from "@/components/app/WeekSelector";
+import { fetchApiJson } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/api-base-url";
 import {
   createDefaultRequirements,
@@ -85,6 +86,7 @@ function StaffingPageClient() {
   const [uploads, setUploads] = useState<UploadedScreenshot[]>([]);
   const [isReadingUploads, setIsReadingUploads] = useState(false);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
+  const [hasLoadedSchedules, setHasLoadedSchedules] = useState(false);
 
   useEffect(() => {
     const requestedWeek = parseWeekParam(searchParams.get("week"));
@@ -140,18 +142,17 @@ function StaffingPageClient() {
 
     async function loadSchedules() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/schedules`);
-        const payload = (await response.json()) as {
+        const payload = await fetchApiJson<{
           schedulesByWeek?: Record<string, WeekSchedule>;
           error?: string;
-        };
-
-        if (!response.ok) {
-        throw new Error(payload.error || "Хуваарь ачаалж чадсангүй.");
-        }
+        }>(`${API_BASE_URL}/schedules`);
 
         if (!cancelled && payload.schedulesByWeek && Object.keys(payload.schedulesByWeek).length > 0) {
           setSchedulesByWeek(payload.schedulesByWeek);
+        }
+
+        if (!cancelled) {
+          setHasLoadedSchedules(true);
         }
       } catch (error) {
         if (!cancelled) {
@@ -178,7 +179,7 @@ function StaffingPageClient() {
       requirements: normalizeWeekRequirements(schedule.requirements),
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/schedules/${targetWeekKey}`, {
+    const response = await fetch(`${API_BASE_URL}/schedules/${targetWeekKey}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(normalized),
@@ -190,7 +191,7 @@ function StaffingPageClient() {
   }, []);
 
   useEffect(() => {
-    if (isLoadingSchedules) return;
+    if (isLoadingSchedules || !hasLoadedSchedules) return;
 
     const timeoutId = window.setTimeout(() => {
       void persistSchedule(weekKey, currentSchedule).catch(() => {
@@ -201,7 +202,7 @@ function StaffingPageClient() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [currentSchedule, isLoadingSchedules, persistSchedule, weekKey]);
+  }, [currentSchedule, hasLoadedSchedules, isLoadingSchedules, persistSchedule, weekKey]);
 
   const updateCurrentWeek = useCallback(
     (updater: (schedule: WeekSchedule) => WeekSchedule) => {
@@ -342,7 +343,7 @@ function StaffingPageClient() {
 
     setIsReadingUploads(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/parse-schedule-images`, {
+      const response = await fetch(`${API_BASE_URL}/parse-schedule-images`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

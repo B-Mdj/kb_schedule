@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { WeekSelector } from "@/components/app/WeekSelector";
 import { ScheduleGridComponent } from "@/components/app/ScheduleGrid";
 import { ShiftLegend } from "@/components/app/ShiftLegend";
+import { fetchApiJson } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/api-base-url";
 import {
   createDefaultRequirements,
@@ -73,6 +74,7 @@ function SchedulePageClient() {
   });
   const [isExporting, setIsExporting] = useState(false);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
+  const [hasLoadedSchedules, setHasLoadedSchedules] = useState(false);
   const scheduleExportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -108,18 +110,17 @@ function SchedulePageClient() {
 
     async function loadSchedules() {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/schedules`);
-        const payload = (await response.json()) as {
+        const payload = await fetchApiJson<{
           schedulesByWeek?: Record<string, WeekSchedule>;
           error?: string;
-        };
-
-        if (!response.ok) {
-          throw new Error(payload.error || "Failed to load schedules.");
-        }
+        }>(`${API_BASE_URL}/schedules`);
 
         if (!cancelled && payload.schedulesByWeek && Object.keys(payload.schedulesByWeek).length > 0) {
           setSchedulesByWeek(payload.schedulesByWeek);
+        }
+
+        if (!cancelled) {
+          setHasLoadedSchedules(true);
         }
       } catch (error) {
         if (!cancelled) {
@@ -146,19 +147,15 @@ function SchedulePageClient() {
       requirements: normalizeWeekRequirements(schedule.requirements),
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/schedules/${targetWeekKey}`, {
+    await fetchApiJson(`${API_BASE_URL}/schedules/${targetWeekKey}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(normalized),
     });
-
-    if (!response.ok) {
-      throw new Error("Failed to save schedule.");
-    }
   }, []);
 
   useEffect(() => {
-    if (isLoadingSchedules) return;
+    if (isLoadingSchedules || !hasLoadedSchedules) return;
 
     const timeoutId = window.setTimeout(() => {
       void persistSchedule(weekKey, currentSchedule).catch(() => {
@@ -169,7 +166,7 @@ function SchedulePageClient() {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [currentSchedule, isLoadingSchedules, persistSchedule, weekKey]);
+  }, [currentSchedule, hasLoadedSchedules, isLoadingSchedules, persistSchedule, weekKey]);
 
   const updateCurrentWeek = useCallback(
     (updater: (schedule: WeekSchedule) => WeekSchedule) => {
