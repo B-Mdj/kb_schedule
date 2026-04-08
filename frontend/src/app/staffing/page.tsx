@@ -179,15 +179,11 @@ function StaffingPageClient() {
       requirements: normalizeWeekRequirements(schedule.requirements),
     };
 
-    const response = await fetch(`${API_BASE_URL}/schedules/${targetWeekKey}`, {
+    await fetchApiJson(`${API_BASE_URL}/schedules/${targetWeekKey}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(normalized),
     });
-
-    if (!response.ok) {
-      throw new Error("Хүний нөөцийн мэдээлэл хадгалж чадсангүй.");
-    }
   }, []);
 
   useEffect(() => {
@@ -343,7 +339,7 @@ function StaffingPageClient() {
 
     setIsReadingUploads(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/parse-schedule-images`, {
+      const payload = await fetchApiJson<ParsedSchedulePayload>(`${API_BASE_URL}/parse-schedule-images`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -376,11 +372,6 @@ function StaffingPageClient() {
           })),
         }),
       });
-
-      const payload = (await response.json()) as ParsedSchedulePayload & { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error || "AI зураг уншиж чадсангүй.");
-      }
 
       if (!payload.entries?.length) {
         throw new Error("Зурган дээрээс хуваарийн мэдээлэл олдсонгүй.");

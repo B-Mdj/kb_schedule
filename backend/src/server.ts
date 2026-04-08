@@ -12,15 +12,35 @@ import {
 const app = express();
 const port = Number(process.env.PORT || 4000);
 const host = process.env.HOST || "0.0.0.0";
-const allowedOrigins = (process.env.FRONTEND_ORIGIN || "http://localhost:3000,http://127.0.0.1:3000")
+const configuredOrigins = process.env.FRONTEND_ORIGIN;
+const allowedOrigins = (configuredOrigins || "http://localhost:3000,http://127.0.0.1:3000")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const hasConfiguredOrigins = Boolean(configuredOrigins?.trim());
+
+if (!hasConfiguredOrigins) {
+  console.warn(
+    "FRONTEND_ORIGIN is not configured. Allowing browser origins until an explicit allowlist is set."
+  );
+}
+
+if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  console.warn(
+    "BLOB_READ_WRITE_TOKEN is not configured. Schedule data will use local file storage and will not be durable across Vercel instances."
+  );
+}
+
+if (!process.env.GEMINI_API_KEY) {
+  console.warn(
+    "GEMINI_API_KEY is not configured. /parse-schedule-images will return 500 until it is set."
+  );
+}
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || !hasConfiguredOrigins || allowedOrigins.includes(origin)) {
         callback(null, true);
         return;
       }
