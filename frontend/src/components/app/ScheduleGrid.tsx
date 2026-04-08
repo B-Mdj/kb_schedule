@@ -116,16 +116,16 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
     });
 
     return (
-      <div className="border-t border-border bg-muted/30 px-4 py-3">
+      <div className="border-t border-border bg-muted/30 px-3 py-3 sm:px-4">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           Дутуу байгаа ээлж
         </p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           {items.length > 0 ? (
             items.map((item) => (
               <span
                 key={`${branch}-${item}`}
-                className="rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-900"
+                className="min-w-0 rounded-full border border-amber-300 bg-amber-100 px-2 py-1 text-center text-[11px] font-medium text-amber-900 sm:px-2.5 sm:text-xs"
               >
                 {item}
               </span>
@@ -147,7 +147,7 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
       <div
         key={emp.id}
         className={cn(
-          "group grid grid-cols-[160px_repeat(7,minmax(2.75rem,1fr))_48px] border-b border-border last:border-b-0 sm:grid-cols-[220px_repeat(7,1fr)_60px]",
+          "group grid grid-cols-[104px_repeat(7,minmax(2.5rem,1fr))_40px] border-b border-border last:border-b-0 sm:grid-cols-[220px_repeat(7,1fr)_60px]",
           "animate-fade-in"
         )}
         style={{ animationDelay: `${empIdx * 40}ms`, animationFillMode: "backwards" }}
@@ -174,7 +174,7 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
             <>
               <span
                 className={cn(
-                  "flex-1 break-words text-xs leading-snug whitespace-normal font-medium transition-colors sm:text-sm",
+                  "flex-1 break-words text-[11px] leading-snug whitespace-normal font-medium transition-colors sm:text-sm",
                   !locked && "cursor-pointer hover:text-primary"
                 )}
                 onClick={() => !locked && setEditingName(emp.id)}
@@ -183,7 +183,7 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
                 {emp.name}
               </span>
               {!locked && (
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
                   <button
                     onClick={() => onMoveEmployee(emp.id, "up")}
                     className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
@@ -216,7 +216,7 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
         {/* Cells */}
         {(grid[emp.id] || []).map((cell, dayIdx) => {
           return (
-            <div key={`${emp.id}-${dayIdx}`} className="p-1 sm:p-1.5">
+            <div key={`${emp.id}-${dayIdx}`} className="p-0.5 sm:p-1.5">
               <ShiftCell
                 data={cell}
                 disabled={locked}
@@ -227,8 +227,8 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
         })}
 
         {/* Shift count */}
-        <div className="flex items-center justify-center p-2 sm:p-3">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground sm:h-8 sm:w-8 sm:text-sm">
+        <div className="flex items-center justify-center p-1.5 sm:p-3">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-accent-foreground sm:h-8 sm:w-8 sm:text-sm">
             {count}
           </span>
         </div>
@@ -239,20 +239,20 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
   return (
     <div className="space-y-4">
       {/* Branch 1 */}
-      <div className="overflow-auto rounded-xl border border-border bg-card shadow-sm">
-        <div className="min-w-[40rem] sm:min-w-[48rem]">
+      <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-xl border border-border bg-card shadow-sm">
+        <div className="min-w-[26.5rem] sm:min-w-[48rem]">
           <div className="px-4 py-2 bg-muted/50 border-b border-border">
             <span className="text-sm font-semibold text-muted-foreground">Салбар 1</span>
           </div>
           {/* Header */}
-          <div className="sticky top-0 z-20 grid grid-cols-[160px_repeat(7,minmax(2.75rem,1fr))_48px] border-b border-border bg-card sm:grid-cols-[220px_repeat(7,1fr)_60px]">
-            <div className="sticky left-0 z-30 flex items-center bg-card p-2 text-xs font-semibold text-muted-foreground sm:p-3 sm:text-sm">
+          <div className="sticky top-0 z-20 grid grid-cols-[104px_repeat(7,minmax(2.5rem,1fr))_40px] border-b border-border bg-card sm:grid-cols-[220px_repeat(7,1fr)_60px]">
+            <div className="sticky left-0 z-30 flex items-center bg-card p-2 text-[11px] font-semibold text-muted-foreground sm:p-3 sm:text-sm">
               Ажилтан
             </div>
             {DAYS.map((d, i) => (
               <Tooltip key={d}>
                 <TooltipTrigger asChild>
-                  <div className="p-2 text-center text-xs font-semibold text-muted-foreground sm:p-3 sm:text-sm">
+                  <div className="p-2 text-center text-[11px] font-semibold text-muted-foreground sm:p-3 sm:text-sm">
                     {d}
                   </div>
                 </TooltipTrigger>
@@ -279,19 +279,19 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
       </div>
 
       {/* Branch 2 */}
-      <div className="overflow-auto rounded-xl border border-border bg-card shadow-sm">
-        <div className="min-w-[40rem] sm:min-w-[48rem]">
+      <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-xl border border-border bg-card shadow-sm">
+        <div className="min-w-[26.5rem] sm:min-w-[48rem]">
           <div className="px-4 py-2 bg-muted/50 border-b border-border">
             <span className="text-sm font-semibold text-muted-foreground">Салбар 2</span>
           </div>
-          <div className="sticky top-0 z-20 grid grid-cols-[160px_repeat(7,minmax(2.75rem,1fr))_48px] border-b border-border bg-card sm:grid-cols-[220px_repeat(7,1fr)_60px]">
-            <div className="sticky left-0 z-30 flex items-center bg-card p-2 text-xs font-semibold text-muted-foreground sm:p-3 sm:text-sm">
+          <div className="sticky top-0 z-20 grid grid-cols-[104px_repeat(7,minmax(2.5rem,1fr))_40px] border-b border-border bg-card sm:grid-cols-[220px_repeat(7,1fr)_60px]">
+            <div className="sticky left-0 z-30 flex items-center bg-card p-2 text-[11px] font-semibold text-muted-foreground sm:p-3 sm:text-sm">
               Ажилтан
             </div>
             {DAYS.map((d, i) => (
               <Tooltip key={d}>
                 <TooltipTrigger asChild>
-                  <div className="p-2 text-center text-xs font-semibold text-muted-foreground sm:p-3 sm:text-sm">
+                  <div className="p-2 text-center text-[11px] font-semibold text-muted-foreground sm:p-3 sm:text-sm">
                     {d}
                   </div>
                 </TooltipTrigger>

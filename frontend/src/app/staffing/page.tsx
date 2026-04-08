@@ -421,7 +421,7 @@ function StaffingPageClient() {
   }, [employees, requirements, syncWeekQuery, weekStart]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-clip bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
@@ -536,7 +536,7 @@ function StaffingPageClient() {
               AI шаардлагатай үед зөвхөн энд асаасан 2-р салбарын хүмүүсийг 1-р салбарын дутагдалд тооцно.
             </p>
           </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2 sm:gap-3">
             {branch2Employees.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
                 2-р салбарт ажилтан алга.
@@ -556,7 +556,7 @@ function StaffingPageClient() {
                     onClick={() => !locked && handleBranchSupportToggle(employee.id, !enabled)}
                     disabled={locked}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-medium">{employee.name}</p>
                         <p className="text-sm text-muted-foreground">
@@ -564,7 +564,7 @@ function StaffingPageClient() {
                         </p>
                       </div>
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                        className={`self-start rounded-full px-2.5 py-1 text-xs font-medium ${
                           enabled
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted text-muted-foreground"
@@ -584,7 +584,33 @@ function StaffingPageClient() {
           <div className="border-b border-border px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
             <h2 className="text-base font-semibold sm:text-lg">Өдрийн ажиллах хүчний хэрэгцээ</h2>
           </div>
-          <div className="grid grid-cols-2 gap-3 border-b border-border bg-muted/30 px-4 py-4 sm:grid-cols-2 sm:gap-4 sm:px-6 sm:py-5 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 border-b border-border bg-muted/30 px-4 py-4 sm:hidden">
+            <div className="rounded-xl border border-border bg-background px-3 py-3">
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                1-р салбар өглөө
+              </p>
+              <p className="mt-1 text-xl font-semibold">{totalMorningRequirementBranch1}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-background px-3 py-3">
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                1-р салбар орой
+              </p>
+              <p className="mt-1 text-xl font-semibold">{totalEveningRequirementBranch1}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-background px-3 py-3">
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                2-р салбар өглөө
+              </p>
+              <p className="mt-1 text-xl font-semibold">{totalMorningRequirementBranch2}</p>
+            </div>
+            <div className="rounded-xl border border-border bg-background px-3 py-3">
+              <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                2-р салбар орой
+              </p>
+              <p className="mt-1 text-xl font-semibold">{totalEveningRequirementBranch2}</p>
+            </div>
+          </div>
+          <div className="hidden border-b border-border bg-muted/30 px-4 py-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:px-6 sm:py-5 xl:grid-cols-4">
             <div className="rounded-xl border border-border bg-background px-4 py-3">
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                 1-р салбар өглөө
@@ -611,6 +637,77 @@ function StaffingPageClient() {
             </div>
           </div>
           <div className="space-y-3 px-4 py-4 sm:hidden">
+            {requirements.map((requirement, index) => (
+              <div
+                key={`mobile-${targetDayLabels[index]}`}
+                className="rounded-2xl border border-border bg-background p-4 shadow-sm"
+              >
+                <div className="mb-3">
+                  <p className="text-base font-semibold">{DAYS[index]}</p>
+                  <p className="text-sm text-muted-foreground">{targetDayLabels[index]}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="grid gap-1.5 text-xs">
+                    <span className="font-medium text-muted-foreground">С1 өглөө</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={requirement.branch1.morning}
+                      disabled={locked || isLoadingSchedules}
+                      onChange={(event) =>
+                        handleRequirementChange(index, "branch1", "morning", Number(event.target.value))
+                      }
+                      inputMode="numeric"
+                      className="h-11 bg-background text-right font-medium text-foreground"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-xs">
+                    <span className="font-medium text-muted-foreground">С1 орой</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={requirement.branch1.evening}
+                      disabled={locked || isLoadingSchedules}
+                      onChange={(event) =>
+                        handleRequirementChange(index, "branch1", "evening", Number(event.target.value))
+                      }
+                      inputMode="numeric"
+                      className="h-11 bg-background text-right font-medium text-foreground"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-xs">
+                    <span className="font-medium text-muted-foreground">С2 өглөө</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={requirement.branch2.morning}
+                      disabled={locked || isLoadingSchedules}
+                      onChange={(event) =>
+                        handleRequirementChange(index, "branch2", "morning", Number(event.target.value))
+                      }
+                      inputMode="numeric"
+                      className="h-11 bg-background text-right font-medium text-foreground"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-xs">
+                    <span className="font-medium text-muted-foreground">С2 орой</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={requirement.branch2.evening}
+                      disabled={locked || isLoadingSchedules}
+                      onChange={(event) =>
+                        handleRequirementChange(index, "branch2", "evening", Number(event.target.value))
+                      }
+                      inputMode="numeric"
+                      className="h-11 bg-background text-right font-medium text-foreground"
+                    />
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden">
             {requirements.map((requirement, index) => (
               <div
                 key={targetDayLabels[index]}

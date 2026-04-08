@@ -36,7 +36,7 @@ export function ShiftCell({ data, onChange, disabled = false }: ShiftCellProps) 
           onClick={handleClick}
           disabled={disabled}
           className={cn(
-            "shift-cell relative flex h-full min-h-14 w-full flex-col items-center justify-center rounded-lg font-semibold text-base transition-transform transition-shadow duration-150",
+            "shift-cell relative flex h-full min-h-12 w-full flex-col items-center justify-center rounded-lg font-semibold text-sm transition-transform transition-shadow duration-150 sm:min-h-14 sm:text-base",
             getShiftClass(data.shift),
             !disabled && "cursor-pointer hover:-translate-y-0.5 hover:shadow-md",
             disabled && "cursor-default",
@@ -48,7 +48,7 @@ export function ShiftCell({ data, onChange, disabled = false }: ShiftCellProps) 
               S{data.coverageBranch}
             </span>
           )}
-          <span className="text-lg font-bold">{displayText}</span>
+          <span className="text-base font-bold sm:text-lg">{displayText}</span>
           {data.time && (
             <span className="text-[10px] font-normal opacity-70 mt-0.5">{data.time}</span>
           )}

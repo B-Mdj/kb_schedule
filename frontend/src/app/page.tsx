@@ -325,18 +325,20 @@ function SchedulePageClient() {
   }, [employees, syncWeekQuery, weekStart]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-clip bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-4">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <h1 className="text-lg font-bold tracking-tight">🐨 KB Хуваарь</h1>
-            <WeekSelector
-              weekStart={weekStart}
-              onPrev={() => handleWeekChange(-7)}
-              onNext={() => handleWeekChange(7)}
-            />
+            <h1 className="text-base font-bold tracking-tight sm:text-lg">🐨 KB Хуваарь</h1>
+            <div className="w-full sm:w-auto">
+              <WeekSelector
+                weekStart={weekStart}
+                onPrev={() => handleWeekChange(-7)}
+                onNext={() => handleWeekChange(7)}
+              />
+            </div>
           </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2 self-end sm:self-auto">
             <Button
               variant="outline"
               size="icon-sm"
@@ -372,8 +374,8 @@ function SchedulePageClient() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-4 px-3 py-4 sm:px-4 sm:py-6">
-        <div ref={scheduleExportRef} className="rounded-2xl bg-background px-1 py-1">
-          <div className="mb-4 flex items-end justify-between gap-4">
+        <div ref={scheduleExportRef} className="min-w-0 rounded-2xl bg-background px-1 py-1">
+          <div className="mb-4 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-end sm:gap-4">
             <div>
               <h2 className="text-xl font-bold tracking-tight">KB Хуваарь</h2>
               <p className="text-sm text-muted-foreground">

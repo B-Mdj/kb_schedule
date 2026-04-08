@@ -12,10 +12,10 @@ The frontend is a Next.js app in `frontend/`.
 Required environment variables:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example.com
+NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example.com/api
 ```
 
-If you deploy both apps together with Vercel Services, you can omit `NEXT_PUBLIC_API_BASE_URL` and the frontend will use the same origin in production.
+If you deploy both apps together with Vercel Services, you can omit `NEXT_PUBLIC_API_BASE_URL` and the frontend will use the same origin under `/api` in production.
 
 Commands:
 

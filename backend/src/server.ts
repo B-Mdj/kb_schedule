@@ -31,11 +31,11 @@ app.use(
 );
 app.use(express.json({ limit: "50mb" }));
 
-app.get("/api/health", (_req: Request, res: Response) => {
+app.get("/health", (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
-app.get("/api/schedules", async (_req: Request, res: Response<StoredSchedules>) => {
+app.get("/schedules", async (_req: Request, res: Response<StoredSchedules>) => {
   try {
     const stored = await readSchedules();
     res.json(stored);
@@ -48,7 +48,7 @@ app.get("/api/schedules", async (_req: Request, res: Response<StoredSchedules>) 
 });
 
 app.put(
-  "/api/schedules/:weekKey",
+  "/schedules/:weekKey",
   async (
     req: Request<{ weekKey: string }, { ok?: boolean; weekKey?: string; error?: string }, WeekSchedule>,
     res: Response
@@ -73,7 +73,7 @@ app.put(
 );
 
 app.post(
-  "/api/parse-schedule-images",
+  "/parse-schedule-images",
   async (
     req: Request<{}, {}, ParseScheduleImagesRequest>,
     res: Response
