@@ -17,10 +17,11 @@ import {
   createInitialGrid,
   normalizeEmployees,
   normalizeWeekRequirements,
-  ShiftCode,
+  CellData,
   ScheduleGrid,
   Employee,
   WeekRequirements,
+  createEmptyCell,
 } from "@/lib/schedule-data";
 import { exportNodeAsPng } from "@/lib/export-as-image";
 import { toast } from "sonner";
@@ -52,6 +53,31 @@ type WeekSchedule = {
   locked: boolean;
 };
 
+function createDefaultWeekSchedule(employees: Employee[]): WeekSchedule {
+  return {
+    employees,
+    grid: createInitialGrid(employees),
+    requirements: createDefaultRequirements(),
+    locked: false,
+  };
+}
+
+function syncRosterToWeek(sourceEmployees: Employee[], schedule?: WeekSchedule): WeekSchedule {
+  const normalizedEmployees = normalizeEmployees(sourceEmployees);
+  const baseSchedule = schedule ?? createDefaultWeekSchedule(normalizedEmployees);
+
+  return {
+    ...baseSchedule,
+    employees: normalizedEmployees.map((employee) => ({ ...employee })),
+    grid: Object.fromEntries(
+      normalizedEmployees.map((employee) => [
+        employee.id,
+        baseSchedule.grid[employee.id] ?? createInitialGrid([employee])[employee.id],
+      ])
+    ),
+  };
+}
+
 function SchedulePageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -75,6 +101,7 @@ function SchedulePageClient() {
   const [isExporting, setIsExporting] = useState(false);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
   const [hasLoadedSchedules, setHasLoadedSchedules] = useState(false);
+  const [pendingPersistWeekKeys, setPendingPersistWeekKeys] = useState<string[]>([]);
   const scheduleExportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -154,19 +181,34 @@ function SchedulePageClient() {
     });
   }, []);
 
-  useEffect(() => {
-    if (isLoadingSchedules || !hasLoadedSchedules) return;
+  const queueWeekPersistence = useCallback((...keys: string[]) => {
+    setPendingPersistWeekKeys((prev) => Array.from(new Set([...prev, ...keys])));
+  }, []);
 
+  useEffect(() => {
+    if (isLoadingSchedules || !hasLoadedSchedules || pendingPersistWeekKeys.length === 0) return;
+
+    const weekKeysToPersist = [...pendingPersistWeekKeys];
     const timeoutId = window.setTimeout(() => {
-      void persistSchedule(weekKey, currentSchedule).catch(() => {
-        toast.error("Failed to save schedule to the backend.");
-      });
+      void Promise.all(
+        weekKeysToPersist.map(async (targetWeekKey) => {
+          const schedule = schedulesByWeek[targetWeekKey];
+          if (!schedule) return;
+          await persistSchedule(targetWeekKey, schedule);
+        })
+      )
+        .then(() => {
+          setPendingPersistWeekKeys((prev) => prev.filter((key) => !weekKeysToPersist.includes(key)));
+        })
+        .catch(() => {
+          toast.error("Failed to save schedule to the backend.");
+        });
     }, 250);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [currentSchedule, hasLoadedSchedules, isLoadingSchedules, persistSchedule, weekKey]);
+  }, [hasLoadedSchedules, isLoadingSchedules, pendingPersistWeekKeys, persistSchedule, schedulesByWeek]);
 
   const updateCurrentWeek = useCallback(
     (updater: (schedule: WeekSchedule) => WeekSchedule) => {
@@ -193,65 +235,87 @@ function SchedulePageClient() {
     [weekKey]
   );
 
-  const handleCellChange = useCallback((empId: string, dayIndex: number, shift: ShiftCode) => {
+  const updateCurrentAndNextWeekRoster = useCallback(
+    (transformRoster: (employees: Employee[]) => Employee[]) => {
+      const nextWeekKey = getWeekKey(addDays(weekStart, 7));
+
+      setSchedulesByWeek((prev) => {
+        const currentExisting = prev[weekKey] ?? createDefaultWeekSchedule(INITIAL_EMPLOYEES);
+        const normalizedCurrent = {
+          ...currentExisting,
+          employees: normalizeEmployees(currentExisting.employees),
+          requirements: normalizeWeekRequirements(currentExisting.requirements),
+        };
+
+        const nextRoster = normalizeEmployees(transformRoster(normalizedCurrent.employees));
+        const nextCurrentSchedule = syncRosterToWeek(nextRoster, normalizedCurrent);
+        const nextWeekSchedule = syncRosterToWeek(nextRoster, prev[nextWeekKey]);
+
+        return {
+          ...prev,
+          [weekKey]: nextCurrentSchedule,
+          [nextWeekKey]: nextWeekSchedule,
+        };
+      });
+
+      queueWeekPersistence(weekKey, nextWeekKey);
+    },
+    [queueWeekPersistence, weekKey, weekStart]
+  );
+
+  const handleCellChange = useCallback((empId: string, dayIndex: number, nextCell: CellData) => {
     updateCurrentWeek((schedule) => {
       const updated = { ...schedule.grid };
-      const row = [...updated[empId]];
-      const existing = row[dayIndex];
-      row[dayIndex] = { ...existing, shift, time: undefined, coverageBranch: undefined };
+      const employee = schedule.employees.find((item) => item.id === empId);
+      const row = [...(updated[empId] ?? Array.from({ length: 7 }, () => createEmptyCell(employee?.branch ?? 1)))];
+      const existing = row[dayIndex] ?? createEmptyCell(employee?.branch ?? 1);
+      row[dayIndex] = { ...existing, ...nextCell, time: undefined };
       updated[empId] = row;
 
       return { ...schedule, grid: updated };
     });
-  }, [updateCurrentWeek]);
+    queueWeekPersistence(weekKey);
+  }, [queueWeekPersistence, updateCurrentWeek, weekKey]);
 
   const handleNameChange = useCallback((empId: string, newName: string) => {
-    updateCurrentWeek((schedule) => ({
-      ...schedule,
-      employees: schedule.employees.map((employee) =>
+    updateCurrentAndNextWeekRoster((employees) =>
+      employees.map((employee) =>
         employee.id === empId ? { ...employee, name: newName } : employee
-      ),
-    }));
-  }, [updateCurrentWeek]);
+      )
+    );
+  }, [updateCurrentAndNextWeekRoster]);
 
   const handleAddEmployee = useCallback((branch: 1 | 2) => {
     const id = crypto.randomUUID();
     const newEmp: Employee = { id, name: "Шинэ ажилтан", branch };
-    updateCurrentWeek((schedule) => ({
-      ...schedule,
-      employees: [...schedule.employees, newEmp],
-      grid: {
-        ...schedule.grid,
-        [id]: Array.from({ length: 7 }, () => ({
-          shift: "А" as ShiftCode,
-          prefix: branch === 2 ? "19" : undefined,
-        })),
-      },
-    }));
-  }, [updateCurrentWeek]);
+    updateCurrentAndNextWeekRoster((employees) => [...employees, newEmp]);
+  }, [updateCurrentAndNextWeekRoster]);
 
-  const handleMoveEmployee = useCallback((empId: string, direction: "up" | "down") => {
-    updateCurrentWeek((schedule) => {
-      const branchEmployees = schedule.employees.filter((employee) => {
-        const target = schedule.employees.find((item) => item.id === empId);
-        return target ? employee.branch === target.branch : false;
-      });
-      const branchIndex = branchEmployees.findIndex((employee) => employee.id === empId);
+  const handleReorderEmployee = useCallback((empId: string, targetEmpId: string, position: "before" | "after") => {
+    updateCurrentAndNextWeekRoster((employees) => {
+      const draggedEmployee = employees.find((employee) => employee.id === empId);
+      const targetEmployee = employees.find((employee) => employee.id === targetEmpId);
+      if (!draggedEmployee || !targetEmployee || draggedEmployee.branch !== targetEmployee.branch) return employees;
 
-      if (branchIndex === -1) return schedule;
-
-      const swapIndex = direction === "up" ? branchIndex - 1 : branchIndex + 1;
-      if (swapIndex < 0 || swapIndex >= branchEmployees.length) return schedule;
+      const branchEmployees = employees.filter((employee) => employee.branch === draggedEmployee.branch);
+      const fromIndex = branchEmployees.findIndex((employee) => employee.id === empId);
+      const targetIndex = branchEmployees.findIndex((employee) => employee.id === targetEmpId);
+      if (fromIndex === -1 || targetIndex === -1) return employees;
 
       const reorderedBranch = [...branchEmployees];
-      const [movedEmployee] = reorderedBranch.splice(branchIndex, 1);
-      reorderedBranch.splice(swapIndex, 0, movedEmployee);
+      const [movedEmployee] = reorderedBranch.splice(fromIndex, 1);
+      const adjustedTargetIndex = fromIndex < targetIndex ? targetIndex - 1 : targetIndex;
+      const insertIndex = position === "before" ? adjustedTargetIndex : adjustedTargetIndex + 1;
+      reorderedBranch.splice(insertIndex, 0, movedEmployee);
+
+      const unchangedOrder = reorderedBranch.every((employee, index) => employee.id === branchEmployees[index]?.id);
+      if (unchangedOrder) return employees;
 
       const nextEmployees: Employee[] = [];
       let branchCursor = 0;
 
-      schedule.employees.forEach((employee) => {
-        if (employee.branch === movedEmployee.branch) {
+      employees.forEach((employee) => {
+        if (employee.branch === draggedEmployee.branch) {
           nextEmployees.push(reorderedBranch[branchCursor]);
           branchCursor += 1;
         } else {
@@ -259,30 +323,24 @@ function SchedulePageClient() {
         }
       });
 
-      return { ...schedule, employees: nextEmployees };
+      return nextEmployees;
     });
-  }, [updateCurrentWeek]);
+  }, [updateCurrentAndNextWeekRoster]);
 
   const handleRemoveEmployee = useCallback((empId: string) => {
-    updateCurrentWeek((schedule) => {
-      const updated = { ...schedule.grid };
-      delete updated[empId];
-
-      return {
-        ...schedule,
-        employees: schedule.employees.filter((employee) => employee.id !== empId),
-        grid: updated,
-      };
-    });
-  }, [updateCurrentWeek]);
+    updateCurrentAndNextWeekRoster((employees) =>
+      employees.filter((employee) => employee.id !== empId)
+    );
+  }, [updateCurrentAndNextWeekRoster]);
 
   const handleLockToggle = useCallback(() => {
     updateCurrentWeek((schedule) => ({
       ...schedule,
       locked: !schedule.locked,
     }));
+    queueWeekPersistence(weekKey);
     toast.success(locked ? "Week unlocked." : "Week locked.");
-  }, [locked, updateCurrentWeek]);
+  }, [locked, queueWeekPersistence, updateCurrentWeek, weekKey]);
 
   const handleExport = useCallback(async () => {
     if (!scheduleExportRef.current) {
@@ -305,24 +363,25 @@ function SchedulePageClient() {
   const handleWeekChange = useCallback((offset: number) => {
     const nextWeekStart = addDays(weekStart, offset);
     const nextWeekKey = getWeekKey(nextWeekStart);
+    let createdNewWeek = false;
 
     setSchedulesByWeek((prev) => {
       if (prev[nextWeekKey]) return prev;
+      createdNewWeek = true;
 
       return {
         ...prev,
-        [nextWeekKey]: {
-          employees: employees.map((employee) => ({ ...employee })),
-          grid: createInitialGrid(employees),
-          requirements: createDefaultRequirements(),
-          locked: false,
-        },
+        [nextWeekKey]: syncRosterToWeek(employees),
       };
     });
 
+    if (createdNewWeek) {
+      queueWeekPersistence(nextWeekKey);
+    }
+
     setWeekStart(nextWeekStart);
     syncWeekQuery(nextWeekStart);
-  }, [employees, syncWeekQuery, weekStart]);
+  }, [employees, queueWeekPersistence, syncWeekQuery, weekStart]);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-background">
@@ -393,7 +452,7 @@ function SchedulePageClient() {
               onCellChange={handleCellChange}
               onNameChange={handleNameChange}
               onAddEmployee={handleAddEmployee}
-              onMoveEmployee={handleMoveEmployee}
+              onReorderEmployee={handleReorderEmployee}
               onRemoveEmployee={handleRemoveEmployee}
             />
           </div>

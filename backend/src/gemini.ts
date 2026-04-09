@@ -221,6 +221,7 @@ export async function parseScheduleImages(
       name: string;
       branch: 1 | 2;
       canWorkBranch1?: boolean;
+      canWorkBranch2?: boolean;
     }>;
     dailyRequirements?: Array<{
       date: string;
@@ -261,15 +262,20 @@ export async function parseScheduleImages(
       ? `employee_directory_with_branches: ${employeeDirectory
           .map(
             (employee) =>
-              `${employee.name} (branch ${employee.branch}, can_work_branch1: ${employee.canWorkBranch1 ? "true" : "false"})`
+              `${employee.name} (branch ${employee.branch}, can_work_branch1: ${employee.canWorkBranch1 ? "true" : "false"}, can_work_branch2: ${employee.canWorkBranch2 ? "true" : "false"})`
           )
           .join(", ")}`
       : "",
     "SHIFT TYPES",
-    '- "өглөө", "ө" -> "morning"',
-    '- "орой", "о" -> "evening"',
+    '- "өглөө", "өг", "өгл", "Ө", "ө" -> "morning"',
+    '- "орой", "ор", "О", "о" -> "evening"',
     '- "бүтэн" -> "full_day"',
     '- "amrah" or missing -> "rest"',
+    "CRITICAL CHARACTER RULE",
+    'Cyrillic "Ө/ө" and Cyrillic "О/о" are different letters.',
+    'If the screenshot shows "Ө" or "ө", that is ALWAYS morning, never evening.',
+    'Only "О" or "о" means evening.',
+    'Do not normalize or collapse "Ө" into "О".',
     'Numeric shorthand: "-4" -> "evening", "-9" -> "full_day".',
     "IMPORTANT: full_day means the person can work both morning and evening, but do NOT split it here.",
     "If someone says they can start later, such as 11:00 or 13:00, keep the requested shift type and capture the late start in start_time using 24-hour HH:mm format.",
@@ -383,7 +389,7 @@ export async function parseScheduleImages(
       ? `employees: ${employeeDirectory
           .map(
             (employee) =>
-              `${employee.name} (branch ${employee.branch}, can_work_branch1: ${employee.canWorkBranch1 ? "true" : "false"})`
+              `${employee.name} (branch ${employee.branch}, can_work_branch1: ${employee.canWorkBranch1 ? "true" : "false"}, can_work_branch2: ${employee.canWorkBranch2 ? "true" : "false"})`
           )
           .join(", ")}`
       : options.employeeNames?.length
@@ -413,6 +419,9 @@ export async function parseScheduleImages(
     'evening = "О"',
     'full_day = "Б"',
     'rest = "А"',
+    "CRITICAL CHARACTER RULE",
+    'Cyrillic "Ө" means morning and must never be converted to "О".',
+    'Cyrillic "О" means evening.',
     "IMPORTANT: full_day means the employee can work both shifts.",
     "ONLY assign both if they requested full_day.",
     "Never assign double shift otherwise.",
@@ -438,6 +447,8 @@ export async function parseScheduleImages(
     "Branch 2 employees normally count toward branch 2.",
     "If a branch 2 employee has can_work_branch1: true, you may assign them to cover branch 1 on specific days when needed.",
     "When that happens, keep their employee name the same and record coverage_branch as 1 for that date.",
+    "If a branch 1 employee has can_work_branch2: true, you may assign them to cover branch 2 on specific days when needed.",
+    "When that happens, keep their employee name the same and record coverage_branch as 2 for that date.",
     "STRICT RULES",
     "This is NOT extraction. Do NOT reinterpret raw screenshot text.",
     "Only use the structured requests provided.",

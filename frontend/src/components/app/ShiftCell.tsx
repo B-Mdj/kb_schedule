@@ -1,26 +1,34 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ShiftCode, SHIFT_ORDER, SHIFT_LABELS, getShiftClass, CellData } from "@/lib/schedule-data";
+import { SHIFT_LABELS, getShiftClass, CellData } from "@/lib/schedule-data";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface ShiftCellProps {
   data: CellData;
-  onChange: (shift: ShiftCode) => void;
+  options?: CellData[];
+  onChange: (nextCell: CellData) => void;
   disabled?: boolean;
 }
 
-export function ShiftCell({ data, onChange, disabled = false }: ShiftCellProps) {
+function getCellOptionKey(value: CellData) {
+  return `${value.prefix ?? ""}|${value.shift}|${value.coverageBranch ?? ""}`;
+}
+
+export function ShiftCell({ data, options = [data], onChange, disabled = false }: ShiftCellProps) {
   const [animating, setAnimating] = useState(false);
 
   const cycleShift = useCallback(() => {
-    const idx = SHIFT_ORDER.indexOf(data.shift);
-    const next = SHIFT_ORDER[(idx + 1) % SHIFT_ORDER.length];
+    if (options.length === 0) return;
+
+    const currentIndex = options.findIndex((option) => getCellOptionKey(option) === getCellOptionKey(data));
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+    const next = options[(safeIndex + 1) % options.length] ?? options[0] ?? data;
     setAnimating(true);
     onChange(next);
     setTimeout(() => setAnimating(false), 250);
-  }, [data.shift, onChange]);
+  }, [data, onChange, options]);
 
   const handleClick = () => {
     if (disabled) return;
@@ -33,6 +41,7 @@ export function ShiftCell({ data, onChange, disabled = false }: ShiftCellProps) 
     <Tooltip>
       <TooltipTrigger asChild>
         <button
+          type="button"
           onClick={handleClick}
           disabled={disabled}
           className={cn(
@@ -43,11 +52,6 @@ export function ShiftCell({ data, onChange, disabled = false }: ShiftCellProps) 
             animating && "animate-cell-pop"
           )}
         >
-          {data.coverageBranch && (
-            <span className="absolute left-1.5 top-1.5 rounded bg-black/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide">
-              S{data.coverageBranch}
-            </span>
-          )}
           <span className="text-base font-bold sm:text-lg">{displayText}</span>
           {data.time && (
             <span className="text-[10px] font-normal opacity-70 mt-0.5">{data.time}</span>
@@ -56,6 +60,8 @@ export function ShiftCell({ data, onChange, disabled = false }: ShiftCellProps) 
       </TooltipTrigger>
       <TooltipContent side="top" className="text-xs">
         {SHIFT_LABELS[data.shift]}
+        {data.coverageBranch === 2 && " · 2-р салбар"}
+        {data.coverageBranch === 1 && " · 1-р салбар"}
         {data.time && ` · ${data.time}`}
       </TooltipContent>
     </Tooltip>

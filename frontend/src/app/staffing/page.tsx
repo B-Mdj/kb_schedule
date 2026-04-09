@@ -126,6 +126,7 @@ function StaffingPageClient() {
     (sum, item) => sum + item.branch2.evening,
     0
   );
+  const branch1Employees = employees.filter((employee) => employee.branch === 1);
   const branch2Employees = employees.filter((employee) => employee.branch === 2);
 
   const syncWeekQuery = useCallback(
@@ -265,12 +266,16 @@ function StaffingPageClient() {
     [updateCurrentWeek]
   );
 
-  const handleBranchSupportToggle = useCallback((employeeId: string, enabled: boolean) => {
+  const handleBranchSupportToggle = useCallback((employeeId: string, targetBranch: 1 | 2, enabled: boolean) => {
     updateCurrentWeek((schedule) => ({
       ...schedule,
       employees: schedule.employees.map((employee) =>
         employee.id === employeeId
-          ? { ...employee, canWorkBranch1: employee.branch === 2 ? enabled : false }
+          ? {
+              ...employee,
+              canWorkBranch1: employee.branch === 2 && targetBranch === 1 ? enabled : employee.canWorkBranch1,
+              canWorkBranch2: employee.branch === 1 && targetBranch === 2 ? enabled : employee.canWorkBranch2,
+            }
           : employee
       ),
     }));
@@ -352,6 +357,7 @@ function StaffingPageClient() {
             name: employee.name,
             branch: employee.branch,
             canWorkBranch1: employee.canWorkBranch1 ?? false,
+            canWorkBranch2: employee.canWorkBranch2 ?? false,
           })),
           dailyRequirements: requirements.map((item, index) => ({
             date: targetDayLabels[index],
@@ -522,6 +528,57 @@ function StaffingPageClient() {
 
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold">1-р салбарын 2-р салбарт ажиллаж болох хүмүүс</h2>
+            <p className="text-sm text-muted-foreground">
+              Энд асаасан 1-р салбарын хүмүүс үндсэн хуваарь дээр `19Ө`, `19О`, `19Б` сонголттой болно, мөн AI шаардлагатай үед 2-р салбарт тооцож болно.
+            </p>
+          </div>
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+            {branch1Employees.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                1-р салбарт ажилтан алга.
+              </div>
+            ) : (
+              branch1Employees.map((employee) => {
+                const enabled = Boolean(employee.canWorkBranch2);
+                return (
+                  <button
+                    key={employee.id}
+                    type="button"
+                    className={`rounded-xl border px-3 py-3 text-left transition-colors sm:px-4 ${
+                      enabled
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-background hover:bg-muted/50"
+                    }`}
+                    onClick={() => !locked && handleBranchSupportToggle(employee.id, 2, !enabled)}
+                    disabled={locked}
+                  >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{employee.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {enabled ? "2-р салбар руу тооцож болно" : "Зөвхөн 1-р салбартаа тооцно"}
+                        </p>
+                      </div>
+                      <span
+                        className={`self-start rounded-full px-2.5 py-1 text-xs font-medium ${
+                          enabled
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {enabled ? "Асаалттай" : "Унтраалттай"}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-1">
             <h2 className="text-base font-semibold">2-р салбарын 1-р салбарт ажиллаж болох хүмүүс</h2>
             <p className="text-sm text-muted-foreground">
               AI шаардлагатай үед зөвхөн энд асаасан 2-р салбарын хүмүүсийг 1-р салбарын дутагдалд тооцно.
@@ -544,7 +601,7 @@ function StaffingPageClient() {
                         ? "border-primary bg-primary/5"
                         : "border-border bg-background hover:bg-muted/50"
                     }`}
-                    onClick={() => !locked && handleBranchSupportToggle(employee.id, !enabled)}
+                    onClick={() => !locked && handleBranchSupportToggle(employee.id, 1, !enabled)}
                     disabled={locked}
                   >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">

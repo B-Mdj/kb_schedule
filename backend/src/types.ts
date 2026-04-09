@@ -17,6 +17,7 @@ export type ParseScheduleImagesRequest = {
     name: string;
     branch: 1 | 2;
     canWorkBranch1?: boolean;
+    canWorkBranch2?: boolean;
   }>;
   dailyRequirements?: Array<{
     date: string;
@@ -51,6 +52,7 @@ export type Employee = {
   name: string;
   branch: 1 | 2;
   canWorkBranch1?: boolean;
+  canWorkBranch2?: boolean;
 };
 
 export type CellData = {

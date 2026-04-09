@@ -6,137 +6,186 @@
           "id": "e2d6f70c-8811-4df8-930e-1728cfb6695d",
           "name": "Мягмарноров",
           "branch": 1,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": true
         },
         {
           "id": "e5155b75-0fc9-438d-b9c0-130eeaeb745a",
           "name": "Ундрам",
           "branch": 1,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "a286cd1b-60dd-461b-bf6e-b19285a8d8a7",
           "name": "Э. Энхжин",
           "branch": 1,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "328c3f59-edfe-42d2-b747-52795cc7f06d",
           "name": "Мөрөнгуа",
           "branch": 1,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "cdc7d0a0-6cfa-45e7-bf14-1cd9ef336e1d",
           "name": "Дэлгэрмөрөн",
           "branch": 1,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "a59090d6-7736-4fd9-bf1d-56426ee85d26",
           "name": "Нинжин",
           "branch": 1,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "469f4af3-c7a8-41b1-9090-7d07c334e473",
           "name": "Мягмардорж",
           "branch": 2,
-          "canWorkBranch1": false
+          "canWorkBranch1": true,
+          "canWorkBranch2": false
         },
         {
           "id": "b12f5f70-5011-4fec-bf8f-28e063e7b41a",
           "name": "Оюумаа",
           "branch": 2,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "b008c5f4-bf06-4a97-8919-9a765fd2071d",
           "name": "Энхзул",
           "branch": 2,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "f24b65f4-8046-4dea-a8e6-47c46626091e",
           "name": "Б. Энхжин",
           "branch": 2,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "8379549f-159c-47e7-a6f1-4b1cc1a49414",
           "name": "Тэмүүлэн",
           "branch": 2,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "8980586a-3c39-4cc1-81e7-654fd8398da8",
           "name": "Цогзолмаа",
           "branch": 2,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "54661b65-d473-405d-a447-3b8bec5cd72a",
           "name": "Халиун",
           "branch": 2,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         },
         {
           "id": "32bee6b9-1329-48e8-8f95-e9d940004814",
           "name": "Нарансолонго",
           "branch": 1,
-          "canWorkBranch1": false
+          "canWorkBranch1": false,
+          "canWorkBranch2": false
         }
       ],
       "grid": {
         "e5155b75-0fc9-438d-b9c0-130eeaeb745a": [
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "a286cd1b-60dd-461b-bf6e-b19285a8d8a7": [
           {
-            "shift": "Б"
+            "shift": "Ө",
+            "coverageBranch": 1
           },
           {
-            "shift": "Ө"
+            "shift": "Ө",
+            "coverageBranch": 1
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "Б"
+            "shift": "Ө",
+            "coverageBranch": 1
           },
           {
-            "shift": "Ө"
+            "shift": "Ө",
+            "coverageBranch": 1
           },
           {
-            "shift": "А"
+            "shift": "Ө",
+            "coverageBranch": 1
           }
         ],
         "328c3f59-edfe-42d2-b747-52795cc7f06d": [
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
+          },
+          {
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
+          },
+          {
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А"
@@ -145,85 +194,123 @@
             "shift": "А"
           },
           {
-            "shift": "Ө"
-          },
-          {
-            "shift": "О"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А"
-          },
-          {
-            "shift": "Б"
           }
         ],
         "cdc7d0a0-6cfa-45e7-bf14-1cd9ef336e1d": [
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "a59090d6-7736-4fd9-bf1d-56426ee85d26": [
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "О"
+            "shift": "О",
+            "time": null,
+            "coverageBranch": 1
           },
           {
-            "shift": "О"
+            "shift": "О",
+            "time": null,
+            "coverageBranch": 1
           },
           {
-            "shift": "О"
+            "shift": "О",
+            "time": null,
+            "coverageBranch": 1
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "О"
+            "shift": "О",
+            "time": null,
+            "coverageBranch": 1
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "32bee6b9-1329-48e8-8f95-e9d940004814": [
           {
-            "shift": "О"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "О",
+            "time": null,
+            "coverageBranch": 1
           },
           {
-            "shift": "О"
+            "shift": "О",
+            "time": null,
+            "coverageBranch": 1
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "Б"
+            "shift": "Б",
+            "time": null,
+            "coverageBranch": 1
           },
           {
-            "shift": "Б"
+            "shift": "Б",
+            "time": null,
+            "coverageBranch": 1
           }
         ],
         "469f4af3-c7a8-41b1-9090-7d07c334e473": [
@@ -233,230 +320,333 @@
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "b12f5f70-5011-4fec-bf8f-28e063e7b41a": [
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "b008c5f4-bf06-4a97-8919-9a765fd2071d": [
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "f24b65f4-8046-4dea-a8e6-47c46626091e": [
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "8379549f-159c-47e7-a6f1-4b1cc1a49414": [
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "8980586a-3c39-4cc1-81e7-654fd8398da8": [
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "54661b65-d473-405d-a447-3b8bec5cd72a": [
           {
-            "shift": "О",
-            "prefix": "19"
-          },
-          {
-            "shift": "Б",
-            "prefix": "19"
+            "shift": "А",
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
-          },
-          {
-            "shift": "Б",
-            "prefix": "19"
-          },
-          {
-            "shift": "О",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           },
           {
             "shift": "А",
-            "prefix": "19"
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
+          },
+          {
+            "shift": "А",
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
+          },
+          {
+            "shift": "А",
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
+          },
+          {
+            "shift": "А",
+            "prefix": "19",
+            "time": null,
+            "coverageBranch": null
           }
         ],
         "e2d6f70c-8811-4df8-930e-1728cfb6695d": [
           {
-            "shift": "А"
+            "shift": "Ө",
+            "coverageBranch": null
           },
           {
-            "shift": "О"
+            "shift": "Ө",
+            "coverageBranch": null
           },
           {
-            "shift": "О"
+            "shift": "Ө",
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "Ө",
+            "coverageBranch": null
           },
           {
-            "shift": "О"
+            "shift": "Ө",
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "Ө",
+            "coverageBranch": null
           },
           {
-            "shift": "А"
+            "shift": "Ө",
+            "coverageBranch": null
           }
         ]
       },
@@ -806,72 +996,86 @@
         {
           "id": "418ddb82-9eca-4cc6-94a4-ea091f020c66",
           "name": "Мягмарноров",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "e5155b75-0fc9-438d-b9c0-130eeaeb745a",
           "name": "Ундрам",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "a286cd1b-60dd-461b-bf6e-b19285a8d8a7",
           "name": "Энхжин",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "328c3f59-edfe-42d2-b747-52795cc7f06d",
           "name": "Мөрөнгуа",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "cdc7d0a0-6cfa-45e7-bf14-1cd9ef336e1d",
           "name": "Дэлгэрмөрөн",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "a59090d6-7736-4fd9-bf1d-56426ee85d26",
           "name": "Нинжин",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "32bee6b9-1329-48e8-8f95-e9d940004814",
           "name": "Нарансолонго",
-          "branch": 1
+          "branch": 1,
+          "canWorkBranch1": false
         },
         {
           "id": "469f4af3-c7a8-41b1-9090-7d07c334e473",
           "name": "Мягмардорж",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "b12f5f70-5011-4fec-bf8f-28e063e7b41a",
           "name": "Оюумаа",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "b008c5f4-bf06-4a97-8919-9a765fd2071d",
           "name": "Энхзул",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "f24b65f4-8046-4dea-a8e6-47c46626091e",
           "name": "Энхжин",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "8379549f-159c-47e7-a6f1-4b1cc1a49414",
           "name": "Тэмүүлэн",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "8980586a-3c39-4cc1-81e7-654fd8398da8",
           "name": "Цогзолмаа",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         },
         {
           "id": "54661b65-d473-405d-a447-3b8bec5cd72a",
           "name": "Халиун",
-          "branch": 2
+          "branch": 2,
+          "canWorkBranch1": false
         }
       ],
       "grid": {
@@ -1247,7 +1451,79 @@
           }
         ]
       },
-      "locked": false
+      "locked": false,
+      "requirements": [
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        }
+      ]
     },
     "2026-03-16": {
       "employees": [
@@ -1695,6 +1971,540 @@
           }
         ]
       },
+      "locked": false
+    },
+    "2026-03-23": {
+      "employees": [
+        {
+          "id": "418ddb82-9eca-4cc6-94a4-ea091f020c66",
+          "name": "Мягмарноров",
+          "branch": 1,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "e5155b75-0fc9-438d-b9c0-130eeaeb745a",
+          "name": "Ундрам",
+          "branch": 1,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "a286cd1b-60dd-461b-bf6e-b19285a8d8a7",
+          "name": "Энхжин",
+          "branch": 1,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "328c3f59-edfe-42d2-b747-52795cc7f06d",
+          "name": "Мөрөнгуа",
+          "branch": 1,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "cdc7d0a0-6cfa-45e7-bf14-1cd9ef336e1d",
+          "name": "Дэлгэрмөрөн",
+          "branch": 1,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "a59090d6-7736-4fd9-bf1d-56426ee85d26",
+          "name": "Нинжин",
+          "branch": 1,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "32bee6b9-1329-48e8-8f95-e9d940004814",
+          "name": "Нарансолонго",
+          "branch": 1,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "469f4af3-c7a8-41b1-9090-7d07c334e473",
+          "name": "Мягмардорж",
+          "branch": 2,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "b12f5f70-5011-4fec-bf8f-28e063e7b41a",
+          "name": "Оюумаа",
+          "branch": 2,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "b008c5f4-bf06-4a97-8919-9a765fd2071d",
+          "name": "Энхзул",
+          "branch": 2,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "f24b65f4-8046-4dea-a8e6-47c46626091e",
+          "name": "Энхжин",
+          "branch": 2,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "8379549f-159c-47e7-a6f1-4b1cc1a49414",
+          "name": "Тэмүүлэн",
+          "branch": 2,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "8980586a-3c39-4cc1-81e7-654fd8398da8",
+          "name": "Цогзолмаа",
+          "branch": 2,
+          "canWorkBranch1": false
+        },
+        {
+          "id": "54661b65-d473-405d-a447-3b8bec5cd72a",
+          "name": "Халиун",
+          "branch": 2,
+          "canWorkBranch1": false
+        }
+      ],
+      "grid": {
+        "418ddb82-9eca-4cc6-94a4-ea091f020c66": [
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          }
+        ],
+        "e5155b75-0fc9-438d-b9c0-130eeaeb745a": [
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          }
+        ],
+        "a286cd1b-60dd-461b-bf6e-b19285a8d8a7": [
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          }
+        ],
+        "328c3f59-edfe-42d2-b747-52795cc7f06d": [
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          }
+        ],
+        "cdc7d0a0-6cfa-45e7-bf14-1cd9ef336e1d": [
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          }
+        ],
+        "a59090d6-7736-4fd9-bf1d-56426ee85d26": [
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          }
+        ],
+        "32bee6b9-1329-48e8-8f95-e9d940004814": [
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          }
+        ],
+        "469f4af3-c7a8-41b1-9090-7d07c334e473": [
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          }
+        ],
+        "b12f5f70-5011-4fec-bf8f-28e063e7b41a": [
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          }
+        ],
+        "b008c5f4-bf06-4a97-8919-9a765fd2071d": [
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          }
+        ],
+        "f24b65f4-8046-4dea-a8e6-47c46626091e": [
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          }
+        ],
+        "8379549f-159c-47e7-a6f1-4b1cc1a49414": [
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          }
+        ],
+        "8980586a-3c39-4cc1-81e7-654fd8398da8": [
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          }
+        ],
+        "54661b65-d473-405d-a447-3b8bec5cd72a": [
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          },
+          {
+            "shift": "А",
+            "prefix": "19"
+          }
+        ]
+      },
+      "requirements": [
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        },
+        {
+          "branch1": {
+            "morning": 2,
+            "evening": 2
+          },
+          "branch2": {
+            "morning": 2,
+            "evening": 2
+          }
+        }
+      ],
       "locked": false
     }
   }

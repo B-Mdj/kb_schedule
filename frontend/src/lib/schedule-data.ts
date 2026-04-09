@@ -26,6 +26,7 @@ export type Employee = {
   name: string;
   branch: 1 | 2;
   canWorkBranch1?: boolean;
+  canWorkBranch2?: boolean;
 };
 
 export type ScheduleGrid = Record<string, CellData[]>;
@@ -75,6 +76,13 @@ function createInitialRow(branch: 1 | 2): CellData[] {
   }));
 }
 
+export function createEmptyCell(branch: 1 | 2): CellData {
+  return {
+    shift: "А",
+    prefix: branch === 2 ? "19" : undefined,
+  };
+}
+
 export function createInitialGrid(employees: Employee[]): ScheduleGrid {
   return Object.fromEntries(
     employees.map((employee) => [employee.id, createInitialRow(employee.branch)])
@@ -85,7 +93,27 @@ export function normalizeEmployees(employees?: Employee[] | null): Employee[] {
   return (employees ?? []).map((employee) => ({
     ...employee,
     canWorkBranch1: employee.branch === 2 ? Boolean(employee.canWorkBranch1) : false,
+    canWorkBranch2: employee.branch === 1 ? Boolean(employee.canWorkBranch2) : false,
   }));
+}
+
+export function getAvailableCellStates(employee: Employee): CellData[] {
+  const baseOptions: CellData[] = [
+    { shift: "А", prefix: employee.branch === 2 ? "19" : undefined },
+    { shift: "Ө", prefix: employee.branch === 2 ? "19" : undefined },
+    { shift: "О", prefix: employee.branch === 2 ? "19" : undefined },
+    { shift: "Б", prefix: employee.branch === 2 ? "19" : undefined },
+  ];
+
+  if (employee.branch === 1 && employee.canWorkBranch2) {
+    baseOptions.push(
+      { shift: "Ө", prefix: "19", coverageBranch: 2 },
+      { shift: "О", prefix: "19", coverageBranch: 2 },
+      { shift: "Б", prefix: "19", coverageBranch: 2 }
+    );
+  }
+
+  return baseOptions;
 }
 
 export function createDefaultRequirements(): WeekRequirements {

@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { DragEvent, useMemo, useState } from "react";
 import {
   countsTowardShift,
   Employee,
   ScheduleGrid as GridType,
   DAYS,
   DAYS_FULL,
-  ShiftCode,
+  CellData,
   WeekRequirements,
   countShifts,
+  getAvailableCellStates,
 } from "@/lib/schedule-data";
 import { ShiftCell } from "./ShiftCell";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,26 +25,25 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
   employees: Employee[];
   grid: GridType;
   requirements: WeekRequirements;
-  onCellChange: (empId: string, dayIndex: number, shift: ShiftCode) => void;
+  onCellChange: (empId: string, dayIndex: number, nextCell: CellData) => void;
   onNameChange: (empId: string, newName: string) => void;
   onAddEmployee: (branch: 1 | 2) => void;
-  onMoveEmployee: (empId: string, direction: "up" | "down") => void;
+  onReorderEmployee: (empId: string, targetEmpId: string, position: "before" | "after") => void;
   onRemoveEmployee: (empId: string) => void;
   locked?: boolean;
 }
 
-const MIN_SHIFTS = 4;
-
-export function ScheduleGridComponent({ employees, grid, requirements, onCellChange, onNameChange, onAddEmployee, onMoveEmployee, onRemoveEmployee, locked = false }: Props) {
+export function ScheduleGridComponent({ employees, grid, requirements, onCellChange, onNameChange, onAddEmployee, onReorderEmployee, onRemoveEmployee, locked = false }: Props) {
   const [editingName, setEditingName] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [draggedEmployeeId, setDraggedEmployeeId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ empId: string; position: "before" | "after" } | null>(null);
 
   const branch1 = employees.filter((e) => e.branch === 1);
   const branch2 = employees.filter((e) => e.branch === 2);
@@ -138,26 +138,66 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
     );
   };
 
+  const getDropPosition = (event: DragEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+  };
+
+  const handleDragStart = (event: DragEvent<HTMLButtonElement>, employee: Employee) => {
+    if (locked) return;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", employee.id);
+    setDraggedEmployeeId(employee.id);
+    setDropTarget({ empId: employee.id, position: "before" });
+  };
+
+  const handleDragEnd = () => {
+    setDraggedEmployeeId(null);
+    setDropTarget(null);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>, employee: Employee) => {
+    if (locked || !draggedEmployeeId || draggedEmployeeId === employee.id) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDropTarget({ empId: employee.id, position: getDropPosition(event) });
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>, employee: Employee) => {
+    if (locked || !draggedEmployeeId || draggedEmployeeId === employee.id) return;
+    event.preventDefault();
+    const position = getDropPosition(event);
+    onReorderEmployee(draggedEmployeeId, employee.id, position);
+    setDraggedEmployeeId(null);
+    setDropTarget(null);
+  };
+
   const renderRow = (emp: Employee, empIdx: number, branchEmployees: Employee[]) => {
     const count = shiftCounts[emp.id];
-    const branchIndex = branchEmployees.findIndex((employee) => employee.id === emp.id);
-    const canMoveUp = branchIndex > 0;
-    const canMoveDown = branchIndex >= 0 && branchIndex < branchEmployees.length - 1;
+    const isDragged = draggedEmployeeId === emp.id;
+    const showDropBefore = dropTarget?.empId === emp.id && dropTarget.position === "before" && draggedEmployeeId !== emp.id;
+    const showDropAfter = dropTarget?.empId === emp.id && dropTarget.position === "after" && draggedEmployeeId !== emp.id;
     return (
       <div
         key={emp.id}
         className={cn(
-          "group grid grid-cols-[104px_repeat(7,minmax(2.5rem,1fr))_40px] border-b border-border last:border-b-0 sm:grid-cols-[220px_repeat(7,1fr)_60px]",
+          "group relative grid grid-cols-[104px_repeat(7,minmax(2.5rem,1fr))_40px] border-b border-border last:border-b-0 sm:grid-cols-[220px_repeat(7,1fr)_60px]",
+          isDragged && "opacity-45",
           "animate-fade-in"
         )}
+        onDragOver={(event) => handleDragOver(event, emp)}
+        onDrop={(event) => handleDrop(event, emp)}
+        onDragEnd={handleDragEnd}
         style={{ animationDelay: `${empIdx * 40}ms`, animationFillMode: "backwards" }}
       >
+        {showDropBefore && <div className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-primary" />}
+        {showDropAfter && <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-primary" />}
         {/* Name - editable */}
-        <div className="sticky left-0 z-10 flex items-start gap-1 border-r border-border bg-card p-2 sm:p-3">
+        <div className="sticky left-0 z-10 flex items-center justify-center gap-1 border-r border-border bg-card p-2 text-center sm:p-3">
           {!locked && editingName === emp.id ? (
             <input
               autoFocus
-              className="w-full border-b border-primary bg-transparent text-xs font-medium outline-none sm:text-sm"
+              className="w-full border-b border-primary bg-transparent text-center text-xs font-medium outline-none sm:text-sm"
               defaultValue={emp.name}
               onBlur={(e) => {
                 onNameChange(emp.id, e.target.value || emp.name);
@@ -172,9 +212,20 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
             />
           ) : (
             <>
+              {!locked && (
+                <button
+                  draggable
+                  onDragStart={(event) => handleDragStart(event, emp)}
+                  onDragEnd={handleDragEnd}
+                  className="cursor-grab text-muted-foreground transition-colors hover:text-foreground active:cursor-grabbing"
+                  title="Чирж байр солих"
+                >
+                  <GripVertical className="h-3.5 w-3.5" />
+                </button>
+              )}
               <span
                 className={cn(
-                  "flex-1 break-words text-[11px] leading-snug whitespace-normal font-medium transition-colors sm:text-sm",
+                  "flex-1 wrap-break-word text-[11px] leading-snug whitespace-normal font-medium transition-colors sm:text-sm text-center",
                   !locked && "cursor-pointer hover:text-primary"
                 )}
                 onClick={() => !locked && setEditingName(emp.id)}
@@ -184,22 +235,6 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
               </span>
               {!locked && (
                 <div className="flex items-center gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                  <button
-                    onClick={() => onMoveEmployee(emp.id, "up")}
-                    className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-                    title="Дээш зөөх"
-                    disabled={!canMoveUp}
-                  >
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => onMoveEmployee(emp.id, "down")}
-                    className="text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-                    title="Доош зөөх"
-                    disabled={!canMoveDown}
-                  >
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
                   <button
                     onClick={() => setDeleteTarget(emp)}
                     className="text-muted-foreground transition-colors hover:text-destructive"
@@ -220,7 +255,8 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
               <ShiftCell
                 data={cell}
                 disabled={locked}
-                onChange={(shift) => onCellChange(emp.id, dayIdx, shift)}
+                options={getAvailableCellStates(emp)}
+                onChange={(nextCell) => onCellChange(emp.id, dayIdx, nextCell)}
               />
             </div>
           );
@@ -237,10 +273,10 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
   };
 
   return (
-    <div className="space-y-4">
+      <div className="space-y-4">
       {/* Branch 1 */}
       <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-xl border border-border bg-card shadow-sm">
-        <div className="min-w-[26.5rem] sm:min-w-[48rem]">
+        <div className="min-w-106 sm:min-w-3xl">
           <div className="px-4 py-2 bg-muted/50 border-b border-border">
             <span className="text-sm font-semibold text-muted-foreground">Салбар 1</span>
           </div>
@@ -280,7 +316,7 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
 
       {/* Branch 2 */}
       <div className="overflow-x-auto overflow-y-hidden overscroll-x-contain rounded-xl border border-border bg-card shadow-sm">
-        <div className="min-w-[26.5rem] sm:min-w-[48rem]">
+        <div className="min-w-106 sm:min-w-3xl">
           <div className="px-4 py-2 bg-muted/50 border-b border-border">
             <span className="text-sm font-semibold text-muted-foreground">Салбар 2</span>
           </div>

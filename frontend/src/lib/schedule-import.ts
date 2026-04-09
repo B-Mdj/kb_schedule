@@ -33,7 +33,7 @@ function createWeekRow(
 ) {
   return Array.from({ length: 7 }, (_, index) => ({
     shift: shifts[index] ?? "А",
-    prefix: branch === 2 ? "19" : undefined,
+    prefix: branch === 2 || coverageBranches?.[index] === 2 ? "19" : undefined,
     time: times?.[index],
     coverageBranch: coverageBranches?.[index],
   }));
