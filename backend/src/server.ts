@@ -11,7 +11,12 @@ import {
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
-const host = process.env.HOST || "0.0.0.0";
+const rawHost = process.env.HOST || "0.0.0.0";
+const configuredHosts = rawHost
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+const host = configuredHosts[0] || "0.0.0.0";
 const configuredOrigins = process.env.FRONTEND_ORIGIN;
 const allowedOrigins = (configuredOrigins || "http://localhost:3000,http://127.0.0.1:3000")
   .split(",")
@@ -23,6 +28,10 @@ if (!hasConfiguredOrigins) {
   console.warn(
     "FRONTEND_ORIGIN is not configured. Allowing browser origins until an explicit allowlist is set."
   );
+}
+
+if (configuredHosts.length > 1) {
+  console.warn(`HOST contains multiple values (${rawHost}). Using ${host}.`);
 }
 
 if (!process.env.BLOB_READ_WRITE_TOKEN) {

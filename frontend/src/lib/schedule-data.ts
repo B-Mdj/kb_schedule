@@ -98,11 +98,12 @@ export function normalizeEmployees(employees?: Employee[] | null): Employee[] {
 }
 
 export function getAvailableCellStates(employee: Employee): CellData[] {
+  const isBranch2 = employee.branch === 2;
   const baseOptions: CellData[] = [
-    { shift: "А", prefix: employee.branch === 2 ? "19" : undefined },
-    { shift: "Ө", prefix: employee.branch === 2 ? "19" : undefined },
-    { shift: "О", prefix: employee.branch === 2 ? "19" : undefined },
-    { shift: "Б", prefix: employee.branch === 2 ? "19" : undefined },
+    { shift: "А", prefix: isBranch2 ? "19" : undefined },
+    { shift: "Ө", prefix: isBranch2 ? "19" : undefined },
+    { shift: "О", prefix: isBranch2 ? "19" : undefined },
+    { shift: "Б", prefix: isBranch2 ? "19" : undefined },
   ];
 
   if (employee.branch === 1 && employee.canWorkBranch2) {
@@ -110,6 +111,14 @@ export function getAvailableCellStates(employee: Employee): CellData[] {
       { shift: "Ө", prefix: "19", coverageBranch: 2 },
       { shift: "О", prefix: "19", coverageBranch: 2 },
       { shift: "Б", prefix: "19", coverageBranch: 2 }
+    );
+  }
+
+  if (employee.branch === 2 && employee.canWorkBranch1) {
+    baseOptions.push(
+      { shift: "Ө", coverageBranch: 1 },
+      { shift: "О", coverageBranch: 1 },
+      { shift: "Б", coverageBranch: 1 }
     );
   }
 

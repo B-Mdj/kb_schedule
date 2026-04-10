@@ -268,8 +268,12 @@ function SchedulePageClient() {
       const updated = { ...schedule.grid };
       const employee = schedule.employees.find((item) => item.id === empId);
       const row = [...(updated[empId] ?? Array.from({ length: 7 }, () => createEmptyCell(employee?.branch ?? 1)))];
-      const existing = row[dayIndex] ?? createEmptyCell(employee?.branch ?? 1);
-      row[dayIndex] = { ...existing, ...nextCell, time: undefined };
+      row[dayIndex] = {
+        shift: nextCell.shift,
+        prefix: nextCell.prefix,
+        coverageBranch: nextCell.coverageBranch,
+        time: undefined,
+      };
       updated[empId] = row;
 
       return { ...schedule, grid: updated };
@@ -448,7 +452,7 @@ function SchedulePageClient() {
               employees={employees}
               grid={grid}
               requirements={requirements}
-              locked={locked || isLoadingSchedules}
+              locked={locked}
               onCellChange={handleCellChange}
               onNameChange={handleNameChange}
               onAddEmployee={handleAddEmployee}

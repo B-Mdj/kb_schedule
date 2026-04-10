@@ -7,7 +7,7 @@
           "name": "Мягмарноров",
           "branch": 1,
           "canWorkBranch1": false,
-          "canWorkBranch2": true
+          "canWorkBranch2": false
         },
         {
           "id": "e5155b75-0fc9-438d-b9c0-130eeaeb745a",
@@ -48,7 +48,7 @@
           "id": "469f4af3-c7a8-41b1-9090-7d07c334e473",
           "name": "Мягмардорж",
           "branch": 2,
-          "canWorkBranch1": true,
+          "canWorkBranch1": false,
           "canWorkBranch2": false
         },
         {
@@ -141,17 +141,10 @@
         ],
         "a286cd1b-60dd-461b-bf6e-b19285a8d8a7": [
           {
-            "shift": "Ө",
-            "coverageBranch": 1
+            "shift": "А"
           },
           {
-            "shift": "Ө",
-            "coverageBranch": 1
-          },
-          {
-            "shift": "А",
-            "time": null,
-            "coverageBranch": null
+            "shift": "А"
           },
           {
             "shift": "А",
@@ -159,27 +152,27 @@
             "coverageBranch": null
           },
           {
-            "shift": "Ө",
-            "coverageBranch": 1
+            "shift": "А",
+            "time": null,
+            "coverageBranch": null
           },
           {
-            "shift": "Ө",
-            "coverageBranch": 1
+            "shift": "А"
           },
           {
-            "shift": "Ө",
-            "coverageBranch": 1
+            "shift": "А"
+          },
+          {
+            "shift": "А"
           }
         ],
         "328c3f59-edfe-42d2-b747-52795cc7f06d": [
           {
             "shift": "А",
-            "time": null,
             "coverageBranch": null
           },
           {
             "shift": "А",
-            "time": null,
             "coverageBranch": null
           },
           {
@@ -205,7 +198,6 @@
         "cdc7d0a0-6cfa-45e7-bf14-1cd9ef336e1d": [
           {
             "shift": "А",
-            "time": null,
             "coverageBranch": null
           },
           {
@@ -246,19 +238,13 @@
             "coverageBranch": null
           },
           {
-            "shift": "О",
-            "time": null,
-            "coverageBranch": 1
+            "shift": "А"
           },
           {
-            "shift": "О",
-            "time": null,
-            "coverageBranch": 1
+            "shift": "А"
           },
           {
-            "shift": "О",
-            "time": null,
-            "coverageBranch": 1
+            "shift": "А"
           },
           {
             "shift": "А",
@@ -266,9 +252,7 @@
             "coverageBranch": null
           },
           {
-            "shift": "О",
-            "time": null,
-            "coverageBranch": 1
+            "shift": "А"
           },
           {
             "shift": "А",
@@ -283,14 +267,10 @@
             "coverageBranch": null
           },
           {
-            "shift": "О",
-            "time": null,
-            "coverageBranch": 1
+            "shift": "А"
           },
           {
-            "shift": "О",
-            "time": null,
-            "coverageBranch": 1
+            "shift": "А"
           },
           {
             "shift": "А",
@@ -303,14 +283,10 @@
             "coverageBranch": null
           },
           {
-            "shift": "Б",
-            "time": null,
-            "coverageBranch": 1
+            "shift": "А"
           },
           {
-            "shift": "Б",
-            "time": null,
-            "coverageBranch": 1
+            "shift": "А"
           }
         ],
         "469f4af3-c7a8-41b1-9090-7d07c334e473": [
@@ -579,7 +555,6 @@
           {
             "shift": "А",
             "prefix": "19",
-            "time": null,
             "coverageBranch": null
           },
           {
@@ -621,32 +596,26 @@
         ],
         "e2d6f70c-8811-4df8-930e-1728cfb6695d": [
           {
-            "shift": "Ө",
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А"
+          },
+          {
+            "shift": "А",
             "coverageBranch": null
           },
           {
-            "shift": "Ө",
-            "coverageBranch": null
+            "shift": "А"
           },
           {
-            "shift": "Ө",
-            "coverageBranch": null
+            "shift": "А"
           },
           {
-            "shift": "Ө",
-            "coverageBranch": null
-          },
-          {
-            "shift": "Ө",
-            "coverageBranch": null
-          },
-          {
-            "shift": "Ө",
-            "coverageBranch": null
-          },
-          {
-            "shift": "Ө",
-            "coverageBranch": null
+            "shift": "А"
           }
         ]
       },
