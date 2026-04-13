@@ -4,11 +4,21 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { addDays, format, isValid, parseISO } from "date-fns";
-import { Download, Lock, Settings2, Unlock } from "lucide-react";
+import { Download, Eraser, Lock, Settings2, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WeekSelector } from "@/components/app/WeekSelector";
 import { ScheduleGridComponent } from "@/components/app/ScheduleGrid";
 import { ShiftLegend } from "@/components/app/ShiftLegend";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { fetchApiJson } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/api-base-url";
 import {
@@ -44,6 +54,14 @@ function parseWeekParam(value: string | null) {
   const parsed = parseISO(`${value}T00:00:00`);
   if (!isValid(parsed)) return null;
   return getMonday(parsed);
+}
+
+function waitForNextPaint() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
 }
 
 type WeekSchedule = {
@@ -102,6 +120,7 @@ function SchedulePageClient() {
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
   const [hasLoadedSchedules, setHasLoadedSchedules] = useState(false);
   const [pendingPersistWeekKeys, setPendingPersistWeekKeys] = useState<string[]>([]);
+  const [showClearDialog, setShowClearDialog] = useState(false);
   const scheduleExportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -272,7 +291,7 @@ function SchedulePageClient() {
         shift: nextCell.shift,
         prefix: nextCell.prefix,
         coverageBranch: nextCell.coverageBranch,
-        time: undefined,
+        time: nextCell.time,
       };
       updated[empId] = row;
 
@@ -346,6 +365,16 @@ function SchedulePageClient() {
     toast.success(locked ? "Week unlocked." : "Week locked.");
   }, [locked, queueWeekPersistence, updateCurrentWeek, weekKey]);
 
+  const handleClearWeek = useCallback(() => {
+    updateCurrentWeek((schedule) => ({
+      ...schedule,
+      grid: createInitialGrid(normalizeEmployees(schedule.employees)),
+    }));
+    queueWeekPersistence(weekKey);
+    setShowClearDialog(false);
+    toast.success("All shifts were reset to A for this week.");
+  }, [queueWeekPersistence, updateCurrentWeek, weekKey]);
+
   const handleExport = useCallback(async () => {
     if (!scheduleExportRef.current) {
       toast.error("Could not find the schedule to export.");
@@ -354,6 +383,7 @@ function SchedulePageClient() {
 
     setIsExporting(true);
     try {
+      await waitForNextPaint();
       const filename = `schedule-${format(weekStart, "yyyy-MM-dd")}.png`;
       await exportNodeAsPng(scheduleExportRef.current, filename);
       toast.success("Schedule image downloaded.");
@@ -367,25 +397,45 @@ function SchedulePageClient() {
   const handleWeekChange = useCallback((offset: number) => {
     const nextWeekStart = addDays(weekStart, offset);
     const nextWeekKey = getWeekKey(nextWeekStart);
-    let createdNewWeek = false;
+    let syncedNextWeek = false;
 
     setSchedulesByWeek((prev) => {
-      if (prev[nextWeekKey]) return prev;
-      createdNewWeek = true;
+      const latestCurrentSchedule = prev[weekKey] ?? createDefaultWeekSchedule(INITIAL_EMPLOYEES);
+      const nextRoster = normalizeEmployees(latestCurrentSchedule.employees);
+      const syncedSchedule = syncRosterToWeek(nextRoster, prev[nextWeekKey]);
+
+      const existingNextSchedule = prev[nextWeekKey];
+      const hasSameRoster =
+        existingNextSchedule &&
+        normalizeEmployees(existingNextSchedule.employees).every(
+          (employee, index) =>
+            employee.id === nextRoster[index]?.id &&
+            employee.name === nextRoster[index]?.name &&
+            employee.branch === nextRoster[index]?.branch &&
+            employee.canWorkBranch1 === nextRoster[index]?.canWorkBranch1 &&
+            employee.canWorkBranch2 === nextRoster[index]?.canWorkBranch2
+        ) &&
+        normalizeEmployees(existingNextSchedule.employees).length === nextRoster.length;
+
+      if (hasSameRoster) {
+        return prev;
+      }
+
+      syncedNextWeek = true;
 
       return {
         ...prev,
-        [nextWeekKey]: syncRosterToWeek(employees),
+        [nextWeekKey]: syncedSchedule,
       };
     });
 
-    if (createdNewWeek) {
+    if (syncedNextWeek) {
       queueWeekPersistence(nextWeekKey);
     }
 
     setWeekStart(nextWeekStart);
     syncWeekQuery(nextWeekStart);
-  }, [employees, queueWeekPersistence, syncWeekQuery, weekStart]);
+  }, [queueWeekPersistence, syncWeekQuery, weekKey, weekStart]);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-background">
@@ -422,6 +472,16 @@ function SchedulePageClient() {
               title={isExporting ? "Хуваарь экспортлож байна" : "Хуваарь экспортлох"}
             >
               <Download className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              onClick={() => setShowClearDialog(true)}
+              disabled={locked}
+              aria-label="Clear this week"
+              title="Clear this week"
+            >
+              <Eraser className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant={locked ? "default" : "outline"}
@@ -462,6 +522,21 @@ function SchedulePageClient() {
           </div>
         </div>
       </main>
+
+      <AlertDialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Week</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will reset every employee in the current week to A for all 7 days.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearWeek}>Clear</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -37,9 +37,10 @@ interface Props {
   onReorderEmployee: (empId: string, targetEmpId: string, position: "before" | "after") => void;
   onRemoveEmployee: (empId: string) => void;
   locked?: boolean;
+  hideShortages?: boolean;
 }
 
-export function ScheduleGridComponent({ employees, grid, requirements, onCellChange, onNameChange, onAddEmployee, onReorderEmployee, onRemoveEmployee, locked = false }: Props) {
+export function ScheduleGridComponent({ employees, grid, requirements, onCellChange, onNameChange, onAddEmployee, onReorderEmployee, onRemoveEmployee, locked = false, hideShortages = false }: Props) {
   const [editingName, setEditingName] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [draggedEmployeeId, setDraggedEmployeeId] = useState<string | null>(null);
@@ -115,24 +116,24 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
       return results;
     });
 
+    if (items.length === 0) {
+      return null;
+    }
+
     return (
       <div className="border-t border-border bg-muted/30 px-3 py-3 sm:px-4">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           Дутуу байгаа ээлж
         </p>
         <div className="mt-2 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          {items.length > 0 ? (
-            items.map((item) => (
-              <span
-                key={`${branch}-${item}`}
-                className="min-w-0 rounded-full border border-amber-300 bg-amber-100 px-2 py-1 text-center text-[11px] font-medium text-amber-900 sm:px-2.5 sm:text-xs"
-              >
-                {item}
-              </span>
-            ))
-          ) : (
-            <span className="text-sm text-muted-foreground">Одоогоор дутуу ээлж алга.</span>
-          )}
+          {items.map((item) => (
+            <span
+              key={`${branch}-${item}`}
+              className="inline-flex min-w-fit whitespace-nowrap rounded-full border border-amber-300 bg-amber-100 px-2 py-1 text-center text-[11px] font-medium text-amber-900 sm:px-2.5 sm:text-xs"
+            >
+              {item}
+            </span>
+          ))}
         </div>
       </div>
     );
@@ -310,7 +311,7 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
               </button>
             </div>
           )}
-          {renderShortages(1)}
+          {!hideShortages && renderShortages(1)}
         </div>
       </div>
 
@@ -349,7 +350,7 @@ export function ScheduleGridComponent({ employees, grid, requirements, onCellCha
               </button>
             </div>
           )}
-          {renderShortages(2)}
+          {!hideShortages && renderShortages(2)}
         </div>
       </div>
 

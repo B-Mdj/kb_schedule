@@ -3,6 +3,15 @@ import { ParsedSchedulePayload, UploadedImagePayload } from "./types";
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
+const REST_SHIFT = "\u0410";
+const MORNING_SHIFT = "\u04E8";
+const EVENING_SHIFT = "\u041E";
+const FULL_DAY_SHIFT = "\u0411";
+
+const NARANSOLONGO = "\u041D\u0430\u0440\u0430\u043D\u0441\u043E\u043B\u043E\u043D\u0433\u043E";
+const MYAGMARNOROV = "\u041C\u044F\u0433\u043C\u0430\u0440\u043D\u043E\u0440\u043E\u0432";
+const MYAGMARDORJ = "\u041C\u044F\u0433\u043C\u0430\u0440\u0434\u043E\u0440\u0436";
+
 type GeminiResponse = {
   candidates?: Array<{
     content?: {
@@ -37,11 +46,17 @@ type ExtractionResult = {
   }>;
 };
 
+type SchedulingShift =
+  | typeof REST_SHIFT
+  | typeof MORNING_SHIFT
+  | typeof EVENING_SHIFT
+  | typeof FULL_DAY_SHIFT;
+
 type SchedulingResult = {
   assignments?: Array<{
     employee_name?: string;
     date?: string;
-    shift?: "А" | "Ө" | "О" | "Б";
+    shift?: SchedulingShift;
     start_time?: string | null;
     coverage_branch?: 1 | 2 | "1" | "2" | null;
   }>;
@@ -54,6 +69,14 @@ type SchedulingResult = {
     employee_name?: string;
     date?: string;
   }>;
+};
+
+type FinalAssignment = {
+  employee_name: string;
+  date: string;
+  shift: SchedulingShift;
+  start_time: string | null;
+  coverage_branch: 1 | 2 | null;
 };
 
 function extractGeminiText(response: GeminiResponse) {
@@ -100,6 +123,41 @@ function normalizeBranch(value: unknown): 1 | 2 | null {
   return null;
 }
 
+function normalizeStartTime(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = trimmed
+    .replace(/[.]/g, ":")
+    .replace(/\s+/g, "")
+    .replace(/[сc]$/i, "");
+
+  const hhmmMatch = normalized.match(/^(\d{1,2}):(\d{2})$/);
+  if (hhmmMatch) {
+    const hours = Number(hhmmMatch[1]);
+    const minutes = Number(hhmmMatch[2]);
+    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    }
+  }
+
+  const hourOnlyMatch = normalized.match(/^(\d{1,2})$/);
+  if (hourOnlyMatch) {
+    const hours = Number(hourOnlyMatch[1]);
+    if (hours >= 0 && hours <= 23) {
+      return `${String(hours).padStart(2, "0")}:00`;
+    }
+  }
+
+  return trimmed;
+}
+
 async function callGeminiJson<T>({
   apiKey,
   prompt,
@@ -120,10 +178,7 @@ async function callGeminiJson<T>({
     body: JSON.stringify({
       contents: [
         {
-          parts: [
-            { text: prompt },
-            ...imageParts,
-          ],
+          parts: [{ text: prompt }, ...imageParts],
         },
       ],
       generationConfig: {
@@ -195,11 +250,204 @@ function normalizeExtractionRequests(
     : [];
 }
 
+function summarizeRequestedShiftCounts(requests: Array<{ employee_name: string; days: Record<string, RequestDay> }>) {
+  return Object.fromEntries(
+    requests.map((request) => {
+      const total = Object.values(request.days ?? {}).reduce((count, day) => {
+        if (day.shift === "full_day") return count + 2;
+        if (day.shift === "morning" || day.shift === "evening") return count + 1;
+        return count;
+      }, 0);
+
+      return [request.employee_name, total];
+    })
+  );
+}
+
+function normalizeInstructionText(value: string) {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function getInstructionMentionedEmployees(
+  aiInstructions: string | undefined,
+  employeeDirectory: Array<{ name: string }>
+) {
+  const normalizedInstructions = normalizeInstructionText(aiInstructions ?? "");
+  if (!normalizedInstructions) {
+    return new Set<string>();
+  }
+
+  return new Set(
+    employeeDirectory
+      .map((employee) => employee.name)
+      .filter((name) => normalizedInstructions.includes(normalizeInstructionText(name)))
+  );
+}
+
+function countsToward(shift: SchedulingShift, shiftType: "morning" | "evening") {
+  if (shiftType === "morning") {
+    return shift === MORNING_SHIFT || shift === FULL_DAY_SHIFT;
+  }
+
+  return shift === EVENING_SHIFT || shift === FULL_DAY_SHIFT;
+}
+
+function adjustAssignmentForOverage(
+  assignment: FinalAssignment,
+  shiftType: "morning" | "evening"
+): FinalAssignment {
+  if (assignment.shift === FULL_DAY_SHIFT) {
+    return {
+      ...assignment,
+      shift: shiftType === "morning" ? EVENING_SHIFT : MORNING_SHIFT,
+    };
+  }
+
+  return {
+    ...assignment,
+    shift: REST_SHIFT,
+    start_time: null,
+    coverage_branch: null,
+  };
+}
+
+function enforceStrictStaffingRequirements(
+  assignments: FinalAssignment[],
+  options: {
+    dayLabels: string[];
+    employeeDirectory: Array<{
+      name: string;
+      branch: 1 | 2;
+    }>;
+    dailyRequirements?: Array<{
+      date: string;
+      branch1: {
+        morning: number;
+        evening: number;
+      };
+      branch2: {
+        morning: number;
+        evening: number;
+      };
+    }>;
+    extractedRequests: Array<{
+      employee_name: string;
+      days: Record<string, RequestDay>;
+    }>;
+    requestedShiftCounts: Record<string, number>;
+    aiInstructions?: string;
+  }
+) {
+  const requirementsByDate = new Map(
+    (options.dailyRequirements ?? []).map((item) => [item.date, item])
+  );
+  const branchByEmployee = new Map(
+    options.employeeDirectory.map((employee) => [employee.name, employee.branch])
+  );
+  const requestByEmployee = new Map(
+    options.extractedRequests.map((request) => [request.employee_name, request.days])
+  );
+  const instructionMentionedEmployees = getInstructionMentionedEmployees(
+    options.aiInstructions,
+    options.employeeDirectory
+  );
+  const nextAssignments = assignments.map((assignment) => ({ ...assignment }));
+
+  const buildAssignedCounts = () => {
+    const counts = new Map<string, number>();
+    nextAssignments.forEach((assignment) => {
+      const increment =
+        assignment.shift === FULL_DAY_SHIFT
+          ? 2
+          : assignment.shift === MORNING_SHIFT || assignment.shift === EVENING_SHIFT
+            ? 1
+            : 0;
+      counts.set(assignment.employee_name, (counts.get(assignment.employee_name) ?? 0) + increment);
+    });
+    return counts;
+  };
+
+  for (const day of options.dayLabels) {
+    const requirement = requirementsByDate.get(day);
+    if (!requirement) {
+      continue;
+    }
+
+    for (const branch of [1, 2] as const) {
+      for (const shiftType of ["morning", "evening"] as const) {
+        const requiredCount =
+          branch === 1 ? requirement.branch1[shiftType] : requirement.branch2[shiftType];
+
+        while (true) {
+          const matchingIndexes = nextAssignments
+            .map((assignment, index) => ({ assignment, index }))
+            .filter(({ assignment }) => {
+              if (assignment.date !== day || !countsToward(assignment.shift, shiftType)) {
+                return false;
+              }
+
+              const effectiveBranch =
+                assignment.coverage_branch ?? branchByEmployee.get(assignment.employee_name) ?? branch;
+              return effectiveBranch === branch;
+            });
+
+          if (matchingIndexes.length <= requiredCount) {
+            break;
+          }
+
+          const assignedCounts = buildAssignedCounts();
+          matchingIndexes.sort((left, right) => {
+            const leftRequest = requestByEmployee.get(left.assignment.employee_name)?.[day];
+            const rightRequest = requestByEmployee.get(right.assignment.employee_name)?.[day];
+            const leftRequested =
+              leftRequest &&
+              ((shiftType === "morning" &&
+                (leftRequest.shift === "morning" || leftRequest.shift === "full_day")) ||
+                (shiftType === "evening" &&
+                  (leftRequest.shift === "evening" || leftRequest.shift === "full_day")));
+            const rightRequested =
+              rightRequest &&
+              ((shiftType === "morning" &&
+                (rightRequest.shift === "morning" || rightRequest.shift === "full_day")) ||
+                (shiftType === "evening" &&
+                  (rightRequest.shift === "evening" || rightRequest.shift === "full_day")));
+
+            if (leftRequested !== rightRequested) {
+              return leftRequested ? 1 : -1;
+            }
+
+            const leftMentioned = instructionMentionedEmployees.has(left.assignment.employee_name);
+            const rightMentioned = instructionMentionedEmployees.has(right.assignment.employee_name);
+            if (leftMentioned !== rightMentioned) {
+              return leftMentioned ? 1 : -1;
+            }
+
+            const leftRequestedTotal = options.requestedShiftCounts[left.assignment.employee_name] ?? 0;
+            const rightRequestedTotal = options.requestedShiftCounts[right.assignment.employee_name] ?? 0;
+            if (leftRequestedTotal !== rightRequestedTotal) {
+              return rightRequestedTotal - leftRequestedTotal;
+            }
+
+            const leftAssigned = assignedCounts.get(left.assignment.employee_name) ?? 0;
+            const rightAssigned = assignedCounts.get(right.assignment.employee_name) ?? 0;
+            return rightAssigned - leftAssigned;
+          });
+
+          const candidate = matchingIndexes[0];
+          nextAssignments[candidate.index] = adjustAssignmentForOverage(candidate.assignment, shiftType);
+        }
+      }
+    }
+  }
+
+  return nextAssignments;
+}
+
 function buildEmptyScheduleMaps(employeeNames: string[], dayLabels: string[]) {
   return {
     finalSchedule: Object.fromEntries(
-      employeeNames.map((name) => [name, Object.fromEntries(dayLabels.map((day) => [day, "А"]))])
-    ) as Record<string, Record<string, "А" | "Ө" | "О" | "Б">>,
+      employeeNames.map((name) => [name, Object.fromEntries(dayLabels.map((day) => [day, REST_SHIFT]))])
+    ) as Record<string, Record<string, SchedulingShift>>,
     startTimes: Object.fromEntries(
       employeeNames.map((name) => [name, Object.fromEntries(dayLabels.map((day) => [day, null]))])
     ) as Record<string, Record<string, string | null>>,
@@ -235,6 +483,7 @@ export async function parseScheduleImages(
       };
     }>;
     allowFallbackAssignment?: boolean;
+    aiInstructions?: string;
   } = {}
 ): Promise<ParsedSchedulePayload> {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -255,9 +504,7 @@ export async function parseScheduleImages(
     options.weekStartIso ? `target_week_start: ${options.weekStartIso}` : "",
     options.weekEndIso ? `target_week_end: ${options.weekEndIso}` : "",
     dayLabels.length ? `target_week_dates: ${dayLabels.join(", ")}` : "",
-    options.employeeNames?.length
-      ? `list_of_employees: ${options.employeeNames.join(", ")}`
-      : "",
+    options.employeeNames?.length ? `list_of_employees: ${options.employeeNames.join(", ")}` : "",
     employeeDirectory.length
       ? `employee_directory_with_branches: ${employeeDirectory
           .map(
@@ -266,29 +513,40 @@ export async function parseScheduleImages(
           )
           .join(", ")}`
       : "",
+    options.aiInstructions?.trim()
+      ? `planner_notes_from_manager: ${options.aiInstructions.trim()}`
+      : "",
     "SHIFT TYPES",
-    '- "өглөө", "өг", "өгл", "Ө", "ө" -> "morning"',
-    '- "орой", "ор", "О", "о" -> "evening"',
-    '- "бүтэн" -> "full_day"',
+    `- "\u04E9\u0433\u043B\u04E9\u04E9", "\u04E9\u0433", "\u04E9\u0433\u043B", "${MORNING_SHIFT}", "\u04E9" -> "morning"`,
+    `- "\u043E\u0440\u043E\u0439", "\u043E\u0440", "${EVENING_SHIFT}", "\u043E" -> "evening"`,
+    '- "\u0431\u04AF\u0442\u044D\u043D" -> "full_day"',
     '- "amrah" or missing -> "rest"',
     "CRITICAL CHARACTER RULE",
-    'Cyrillic "Ө/ө" and Cyrillic "О/о" are different letters.',
-    'If the screenshot shows "Ө" or "ө", that is ALWAYS morning, never evening.',
-    'Only "О" or "о" means evening.',
-    'Do not normalize or collapse "Ө" into "О".',
+    `Cyrillic "${MORNING_SHIFT}/\u04E9" and Cyrillic "${EVENING_SHIFT}/\u043E" are different letters.`,
+    `If the screenshot shows "${MORNING_SHIFT}" or "\u04E9", that is ALWAYS morning, never evening.`,
+    `Only "${EVENING_SHIFT}" or "\u043E" means evening.`,
+    `Do not normalize or collapse "${MORNING_SHIFT}" into "${EVENING_SHIFT}".`,
     'Numeric shorthand: "-4" -> "evening", "-9" -> "full_day".',
     "IMPORTANT: full_day means the person can work both morning and evening, but do NOT split it here.",
     "If someone says they can start later, such as 11:00 or 13:00, keep the requested shift type and capture the late start in start_time using 24-hour HH:mm format.",
+    'Examples: "бүтэн-11с", "Б 11с", "Бүтэн 11:00-аас" all mean shift="full_day" with start_time="11:00".',
+    'Examples: "өглөө 13:00-аас" means shift="morning" with start_time="13:00"; "орой 15с" means shift="evening" with start_time="15:00".',
     "Late-start times can apply to morning or evening shifts. Do not invent a time unless the message states one.",
     "DATE RULES",
     "Extract only dates that fall within the target week.",
     "If one shift word appears after a list of dates, apply that shift to all those dates.",
     "If only day numbers are written, resolve them within the target week.",
+    'Examples: "1buten" = Monday full_day, "2uglu" = Tuesday morning, "3oroi" = Wednesday evening.',
+    'Common shorthand examples: "1dh" = Monday, "2dh" = Tuesday, "3dh" = Wednesday, "4dh" = Thursday, "5dh" = Friday.',
+    'Common Mongolian chat shorthand can also name weekdays directly, for example "hgsnd" or similar Saturday shorthand means Saturday.',
+    'Example: "1dh Б 2dh о hgsnd Б" means Monday full_day, Tuesday evening, Saturday full_day.',
+    'If a message alternates day tokens and shift tokens, pair each day token with the shift token that immediately follows it.',
     'If a date is not mentioned, mark it as "rest".',
     "NAME MATCHING",
     "Messenger names may be in English letters while schedule names are Mongolian.",
     "Match sender to the closest existing employee name.",
-    'Known nickname mapping: "Miga" should match "Мягмарноров", not "Мягмардорж".',
+    `Known nickname mapping: "Miga" should match "${MYAGMARNOROV}", not "${MYAGMARDORJ}".`,
+    `Known nickname mapping: "Migaman" should match "${MYAGMARNOROV}", not "${MYAGMARDORJ}".`,
     "The exact employee label in the grid is the source of truth.",
     "If two employees share the same base name, use initials, suffixes, branch info, or any distinguishing text already present in the grid to keep them separate.",
     "Treat initials added in the grid as part of the employee identity and preserve them exactly in employee_name.",
@@ -299,9 +557,12 @@ export async function parseScheduleImages(
     "Later messages override earlier ones if they conflict.",
     "Combine multiple messages from the same sender.",
     "Handle typos and mixed language.",
+    "If planner_notes_from_manager describes usual patterns, use it only to interpret ambiguous screenshot text during extraction.",
+    "If planner_notes_from_manager says someone usually has a constant shift, do NOT create that shift during extraction unless the screenshots also support it.",
+    "If planner_notes_from_manager mentions a late-start morning such as 'Tuesday morning 10:30', treat that as a flexible morning/full-day preference with start_time 10:30 unless the manager explicitly says morning only.",
     "OUTPUT FORMAT",
     "Each day must be an object with shift and start_time. Use start_time: null when no time was specified.",
-    'Return JSON only in the shape: {"requests":[{"employee_name":"Нарансолонго","matched_from":"Naso Ily","confidence":0.9,"branch":"1","days":{"2026-04-06":"rest"}}],"review":[{"type":"ambiguous_name","raw":"Miga","possible":["Мягмарноров"]}]}.',
+    `Return JSON only in the shape: {"requests":[{"employee_name":"${NARANSOLONGO}","matched_from":"Naso Ily","confidence":0.9,"branch":"1","days":{"2026-04-06":{"shift":"rest","start_time":null}}}],"review":[{"type":"ambiguous_name","raw":"Miga","possible":["${MYAGMARNOROV}"]}]}.`,
     "STRICT RULES",
     "Do NOT assign shifts beyond what the user requested.",
     "Do NOT optimize schedule.",
@@ -375,6 +636,7 @@ export async function parseScheduleImages(
   });
 
   const normalizedRequests = normalizeExtractionRequests(extracted.requests, dayLabels);
+  const requestedShiftCounts = summarizeRequestedShiftCounts(normalizedRequests);
   const branchByName = new Map(employeeDirectory.map((employee) => [employee.name, employee.branch]));
 
   const schedulerPrompt = [
@@ -395,8 +657,15 @@ export async function parseScheduleImages(
       : options.employeeNames?.length
         ? `employees: ${options.employeeNames.join(", ")}`
         : "",
+    options.aiInstructions?.trim()
+      ? `planner_notes_from_manager: ${options.aiInstructions.trim()}`
+      : "",
     `allow_assignment_without_request: ${options.allowFallbackAssignment ? "true" : "false"}`,
-    `extracted_requests: ${JSON.stringify({ requests: normalizedRequests, review: extracted.review ?? [] })}`,
+    `extracted_requests: ${JSON.stringify({
+      requests: normalizedRequests,
+      review: extracted.review ?? [],
+    })}`,
+    `requested_shift_totals_from_chat: ${JSON.stringify(requestedShiftCounts)}`,
     `staffing_requirements: ${JSON.stringify(
       Object.fromEntries(
         (options.dailyRequirements ?? []).map((item) => [
@@ -415,32 +684,43 @@ export async function parseScheduleImages(
       )
     )}`,
     "SHIFT RULES",
-    'morning = "Ө"',
-    'evening = "О"',
-    'full_day = "Б"',
-    'rest = "А"',
+    `morning = "${MORNING_SHIFT}"`,
+    `evening = "${EVENING_SHIFT}"`,
+    `full_day = "${FULL_DAY_SHIFT}"`,
+    `rest = "${REST_SHIFT}"`,
     "CRITICAL CHARACTER RULE",
-    'Cyrillic "Ө" means morning and must never be converted to "О".',
-    'Cyrillic "О" means evening.',
+    `Cyrillic "${MORNING_SHIFT}" means morning and must never be converted to "${EVENING_SHIFT}".`,
+    `Cyrillic "${EVENING_SHIFT}" means evening.`,
     "IMPORTANT: full_day means the employee can work both shifts.",
     "ONLY assign both if they requested full_day.",
     "Never assign double shift otherwise.",
     "If a request includes a late start time such as 11:00 or 13:00, preserve that time on the final assigned shift for that day.",
+    'If the extracted request contains shorthand like "11с", normalize it to "11:00".',
     "Do not invent times. If no time was requested, use null.",
     "CORE GOAL",
     "Create a valid schedule that meets staffing requirements per day, respects requests as much as possible, and distributes shifts fairly.",
+    "Use planner_notes_from_manager as manager-provided guidance for recurring shifts, employees who work around others, and people who may not send chat messages.",
+    "Treat planner_notes_from_manager as strong fallback scheduling guidance when chat requests are missing, incomplete, or ambiguous.",
+    "Interpret manager notes like 'Tuesday morning 10:30' as: the person may be assigned either morning or full_day on Tuesday, but if assigned they should start at 10:30.",
+    "Only treat that kind of note as morning-only when the manager explicitly says it must be morning only.",
     "Employee names in extracted_requests are already resolved identities. Preserve them exactly, including initials or other distinguishing suffixes from the grid.",
     "If two employees have the same base name, treat them as different people if their extracted employee_name strings differ.",
     "ASSIGNMENT PRIORITY",
     "1. Prefer employees who requested that shift.",
-    "2. If too many requested, choose those with fewer total assigned shifts that week.",
-    "3. Keep distribution balanced across all employees.",
-    "4. Avoid overworking the same people.",
-    "5. Do NOT assign shifts on days marked as rest.",
+    "2. If too many people requested shifts for the week, remove or trim shifts from the people with the highest requested_shift_totals_from_chat first.",
+    "3. Among tied people, prefer keeping the shifts of people with fewer total assigned shifts that week.",
+    "4. Keep distribution balanced across all employees.",
+    "5. Avoid overworking the same people.",
+    "6. Do NOT assign shifts on days marked as rest.",
     "CONSTRAINTS",
+    "The final schedule must strictly respect staffing_requirements. Never exceed the required number of people on any branch/day/shift.",
     "Do NOT exceed required workers per shift.",
     "Do NOT assign shifts to people who did not request unless necessary and allowed.",
     "Do NOT assign both shifts unless full_day.",
+    "If planner_notes_from_manager says someone has a constant shift pattern, you may use that as fallback guidance when chat requests are missing or incomplete.",
+    "If planner_notes_from_manager says someone usually works around another person, keep that relationship in mind when filling remaining required shifts and prefer schedules that place them alongside that person when feasible.",
+    "When explicit chat requests conflict with planner_notes_from_manager, explicit chat requests win unless they would break the staffing requirements.",
+    "If planner_notes_from_manager gives a recurring weekly pattern for someone who did not message, prefer that pattern before making arbitrary fallback assignments.",
     "Try to minimize rejected requests.",
     "Use branch-specific staffing requirements.",
     "Branch 1 employees only count toward branch 1.",
@@ -456,7 +736,7 @@ export async function parseScheduleImages(
     "OUTPUT FORMAT",
     "Return an assignments array with one item per employee per date.",
     "Each assignment item must include employee_name, date, shift, start_time, and coverage_branch.",
-    'Return JSON only like {"assignments":[{"employee_name":"Нарансолонго","date":"2026-04-06","shift":"А","start_time":null,"coverage_branch":null}],"summary":{"total_assigned_per_employee":{"Нарансолонго":3}},"review":[]}.',
+    `Return JSON only like {"assignments":[{"employee_name":"${NARANSOLONGO}","date":"2026-04-06","shift":"${REST_SHIFT}","start_time":null,"coverage_branch":null}],"summary":{"total_assigned_per_employee":{"${NARANSOLONGO}":3}},"review":[]}.`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -471,7 +751,10 @@ export async function parseScheduleImages(
           properties: {
             employee_name: { type: "STRING" },
             date: { type: "STRING" },
-            shift: { type: "STRING", enum: ["А", "Ө", "О", "Б"] },
+            shift: {
+              type: "STRING",
+              enum: [REST_SHIFT, MORNING_SHIFT, EVENING_SHIFT, FULL_DAY_SHIFT],
+            },
             start_time: { type: "STRING", nullable: true },
             coverage_branch: { type: "STRING", enum: ["1", "2"], nullable: true },
           },
@@ -510,6 +793,35 @@ export async function parseScheduleImages(
     responseSchema: schedulerSchema,
   });
 
+  const strictAssignments = enforceStrictStaffingRequirements(
+    (scheduled.assignments ?? [])
+      .filter(
+        (assignment): assignment is Required<Pick<FinalAssignment, "employee_name" | "date" | "shift">> &
+          Omit<FinalAssignment, "employee_name" | "date" | "shift"> =>
+          typeof assignment.employee_name === "string" &&
+          typeof assignment.date === "string" &&
+          (assignment.shift === REST_SHIFT ||
+            assignment.shift === MORNING_SHIFT ||
+            assignment.shift === EVENING_SHIFT ||
+            assignment.shift === FULL_DAY_SHIFT)
+      )
+      .map((assignment) => ({
+        employee_name: assignment.employee_name,
+        date: assignment.date,
+        shift: assignment.shift,
+        start_time: normalizeStartTime(assignment.start_time),
+        coverage_branch: normalizeBranch(assignment.coverage_branch),
+      })),
+    {
+      dayLabels,
+      employeeDirectory,
+      dailyRequirements: options.dailyRequirements,
+      extractedRequests: normalizedRequests,
+      requestedShiftCounts,
+      aiInstructions: options.aiInstructions,
+    }
+  );
+
   const reviewNotes = [
     ...(extracted.review ?? []).map((item) => `${item.type}: ${item.raw}`),
     ...(scheduled.review ?? []).map((item) => item.message ?? item.type ?? "review"),
@@ -518,9 +830,9 @@ export async function parseScheduleImages(
   const employeeNames = options.employeeNames ?? employeeDirectory.map((employee) => employee.name);
   const scheduleMaps = buildEmptyScheduleMaps(employeeNames, dayLabels);
 
-  for (const assignment of scheduled.assignments ?? []) {
-    const employeeName = typeof assignment.employee_name === "string" ? assignment.employee_name : "";
-    const day = typeof assignment.date === "string" ? assignment.date : "";
+  for (const assignment of strictAssignments) {
+    const employeeName = assignment.employee_name;
+    const day = assignment.date;
     const shift = assignment.shift;
 
     if (!employeeName || !day || !dayLabels.includes(day)) {
@@ -529,8 +841,8 @@ export async function parseScheduleImages(
 
     if (!scheduleMaps.finalSchedule[employeeName]) {
       scheduleMaps.finalSchedule[employeeName] = Object.fromEntries(
-        dayLabels.map((label) => [label, "А"])
-      ) as Record<string, "А" | "Ө" | "О" | "Б">;
+        dayLabels.map((label) => [label, REST_SHIFT])
+      ) as Record<string, SchedulingShift>;
       scheduleMaps.startTimes[employeeName] = Object.fromEntries(
         dayLabels.map((label) => [label, null])
       ) as Record<string, string | null>;
@@ -539,22 +851,23 @@ export async function parseScheduleImages(
       ) as Record<string, 1 | 2 | null>;
     }
 
-    if (shift === "А" || shift === "Ө" || shift === "О" || shift === "Б") {
+    if (
+      shift === REST_SHIFT ||
+      shift === MORNING_SHIFT ||
+      shift === EVENING_SHIFT ||
+      shift === FULL_DAY_SHIFT
+    ) {
       scheduleMaps.finalSchedule[employeeName][day] = shift;
     }
 
-    scheduleMaps.startTimes[employeeName][day] =
-      typeof assignment.start_time === "string" ? assignment.start_time : null;
-    scheduleMaps.coverageBranches[employeeName][day] = normalizeBranch(assignment.coverage_branch);
+    scheduleMaps.startTimes[employeeName][day] = assignment.start_time;
+    scheduleMaps.coverageBranches[employeeName][day] = assignment.coverage_branch;
   }
 
   return {
     entries: Object.entries(scheduleMaps.finalSchedule).map(([employeeName, days]) => {
       const extractedRequest = normalizedRequests.find((request) => request.employee_name === employeeName);
-      const branch =
-        branchByName.get(employeeName) ??
-        normalizeBranch(extractedRequest?.branch) ??
-        null;
+      const branch = branchByName.get(employeeName) ?? normalizeBranch(extractedRequest?.branch) ?? null;
 
       return {
         employeeName,
@@ -565,13 +878,14 @@ export async function parseScheduleImages(
           return normalizedCoverageBranch ?? undefined;
         }),
         branch,
-        shifts: dayLabels.map((day) => days?.[day] ?? "А"),
+        shifts: dayLabels.map((day) => days?.[day] ?? REST_SHIFT),
         notes: reviewNotes.join(" | ") || "Two-stage AI pipeline completed.",
-        confidence: extractedRequest && extractedRequest.confidence >= 0.85
-          ? "high"
-          : extractedRequest && extractedRequest.confidence >= 0.6
-            ? "medium"
-            : "low",
+        confidence:
+          extractedRequest && extractedRequest.confidence >= 0.85
+            ? "high"
+            : extractedRequest && extractedRequest.confidence >= 0.6
+              ? "medium"
+              : "low",
       };
     }),
   };

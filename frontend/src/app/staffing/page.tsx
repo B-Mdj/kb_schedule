@@ -7,6 +7,7 @@ import { addDays, format, isValid, parseISO } from "date-fns";
 import { ArrowLeft, ImagePlus, Loader2, Trash2, WandSparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { WeekSelector } from "@/components/app/WeekSelector";
 import { fetchApiJson } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/api-base-url";
@@ -62,6 +63,8 @@ type UploadedScreenshot = {
   previewUrl: string;
 };
 
+const AI_INSTRUCTIONS_STORAGE_KEY = "kb-schedule-ai-instructions";
+
 function StaffingPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,9 +87,22 @@ function StaffingPageClient() {
     };
   });
   const [uploads, setUploads] = useState<UploadedScreenshot[]>([]);
+  const [aiInstructions, setAiInstructions] = useState("");
+  const [hasLoadedAiInstructions, setHasLoadedAiInstructions] = useState(false);
   const [isReadingUploads, setIsReadingUploads] = useState(false);
   const [isLoadingSchedules, setIsLoadingSchedules] = useState(true);
   const [hasLoadedSchedules, setHasLoadedSchedules] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setAiInstructions(window.localStorage.getItem(AI_INSTRUCTIONS_STORAGE_KEY) ?? "");
+    setHasLoadedAiInstructions(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !hasLoadedAiInstructions) return;
+    window.localStorage.setItem(AI_INSTRUCTIONS_STORAGE_KEY, aiInstructions);
+  }, [aiInstructions, hasLoadedAiInstructions]);
 
   useEffect(() => {
     const requestedWeek = parseWeekParam(searchParams.get("week"));
@@ -192,7 +208,6 @@ function StaffingPageClient() {
 
     const timeoutId = window.setTimeout(() => {
       void persistSchedule(weekKey, currentSchedule).catch(() => {
-        toast.error("Хүний нөөцийн мэдээлэл хадгалж чадсангүй.");
       });
     }, 250);
 
@@ -370,7 +385,8 @@ function StaffingPageClient() {
               evening: item.branch2.evening,
             },
           })),
-          allowFallbackAssignment: false,
+          allowFallbackAssignment: Boolean(aiInstructions.trim()),
+          aiInstructions: aiInstructions.trim() || undefined,
           images: uploads.map((upload) => ({
             name: upload.name,
             mimeType: upload.mimeType,
@@ -390,32 +406,60 @@ function StaffingPageClient() {
     } finally {
       setIsReadingUploads(false);
     }
-  }, [applyImportedEntries, employees, handleClearUploads, locked, requirements, targetDayLabels, uploads, weekEnd, weekKey, weekStart]);
+  }, [aiInstructions, applyImportedEntries, employees, handleClearUploads, locked, requirements, targetDayLabels, uploads, weekEnd, weekKey, weekStart]);
 
   const handleWeekChange = useCallback((offset: number) => {
     const nextWeekStart = addDays(weekStart, offset);
     const nextWeekKey = getWeekKey(nextWeekStart);
+    let syncedNextWeek = false;
 
     setSchedulesByWeek((prev) => {
-      if (prev[nextWeekKey]) return prev;
+      const latestCurrentSchedule = prev[weekKey] ?? {
+        employees: INITIAL_EMPLOYEES,
+        grid: createInitialGrid(INITIAL_EMPLOYEES),
+        requirements: createDefaultRequirements(),
+        locked: false,
+      };
+      const nextEmployees = normalizeEmployees(latestCurrentSchedule.employees);
+      const existingNextSchedule = prev[nextWeekKey];
+      const nextRequirements = normalizeWeekRequirements(
+        existingNextSchedule?.requirements ?? latestCurrentSchedule.requirements
+      );
+      const hasSameRoster =
+        existingNextSchedule &&
+        normalizeEmployees(existingNextSchedule.employees).every(
+          (employee, index) =>
+            employee.id === nextEmployees[index]?.id &&
+            employee.name === nextEmployees[index]?.name &&
+            employee.branch === nextEmployees[index]?.branch &&
+            employee.canWorkBranch1 === nextEmployees[index]?.canWorkBranch1 &&
+            employee.canWorkBranch2 === nextEmployees[index]?.canWorkBranch2
+        ) &&
+        normalizeEmployees(existingNextSchedule.employees).length === nextEmployees.length;
+
+      if (hasSameRoster) {
+        return prev;
+      }
+
+      syncedNextWeek = true;
 
       return {
         ...prev,
         [nextWeekKey]: {
-          employees: employees.map((employee) => ({ ...employee })),
-          grid: createInitialGrid(employees),
-          requirements: requirements.map((item) => ({
+          employees: nextEmployees.map((employee) => ({ ...employee })),
+          grid: existingNextSchedule?.grid ?? createInitialGrid(nextEmployees),
+          requirements: nextRequirements.map((item) => ({
             branch1: { ...item.branch1 },
             branch2: { ...item.branch2 },
           })),
-          locked: false,
+          locked: existingNextSchedule?.locked ?? false,
         },
       };
     });
 
     setWeekStart(nextWeekStart);
     syncWeekQuery(nextWeekStart);
-  }, [employees, requirements, syncWeekQuery, weekStart]);
+  }, [syncWeekQuery, weekKey, weekStart]);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-background">
@@ -446,6 +490,21 @@ function StaffingPageClient() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-4 px-3 py-4 sm:space-y-6 sm:px-4 sm:py-6">
+        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold">AI заавар</h2>
+            <p className="text-sm text-muted-foreground">
+              Энд байнгын ээлжтэй, бусдыг дагаж ажилладаг, эсвэл чат руу ээлжээ бичдэггүй ажилтнуудын талаар AI-д зориулсан заавар бичнэ.
+            </p>
+          </div>
+          <Textarea
+            value={aiInstructions}
+            onChange={(event) => setAiInstructions(event.target.value)}
+            className="mt-4 min-h-32 resize-y bg-background"
+            disabled={isReadingUploads}
+          />
+        </section>
+
         <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <h2 className="text-base font-semibold">Зураг оруулах</h2>
@@ -920,3 +979,4 @@ export default function StaffingPage() {
     </Suspense>
   );
 }
+

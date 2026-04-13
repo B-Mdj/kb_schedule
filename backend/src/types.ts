@@ -1,9 +1,28 @@
-export type ShiftCode = "А" | "Ө" | "О" | "Б";
+export type ShiftCode = "\u0410" | "\u04E8" | "\u041E" | "\u0411";
 
 export type UploadedImagePayload = {
   name: string;
   mimeType: string;
   dataUrl: string;
+};
+
+export type EmployeeDirectoryEntry = {
+  name: string;
+  branch: 1 | 2;
+  canWorkBranch1?: boolean;
+  canWorkBranch2?: boolean;
+};
+
+export type DailyRequirementInput = {
+  date: string;
+  branch1: {
+    morning: number;
+    evening: number;
+  };
+  branch2: {
+    morning: number;
+    evening: number;
+  };
 };
 
 export type ParseScheduleImagesRequest = {
@@ -13,24 +32,10 @@ export type ParseScheduleImagesRequest = {
   weekEndIso?: string;
   dayLabels?: string[];
   employeeNames?: string[];
-  employeeDirectory?: Array<{
-    name: string;
-    branch: 1 | 2;
-    canWorkBranch1?: boolean;
-    canWorkBranch2?: boolean;
-  }>;
-  dailyRequirements?: Array<{
-    date: string;
-    branch1: {
-      morning: number;
-      evening: number;
-    };
-    branch2: {
-      morning: number;
-      evening: number;
-    };
-  }>;
+  employeeDirectory?: EmployeeDirectoryEntry[];
+  dailyRequirements?: DailyRequirementInput[];
   allowFallbackAssignment?: boolean;
+  aiInstructions?: string;
 };
 
 export type ParsedScheduleEntry = {

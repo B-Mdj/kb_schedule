@@ -4,6 +4,8 @@ import express, { Request, Response } from "express";
 import { parseScheduleImages } from "./gemini";
 import { readSchedules, upsertWeekSchedule } from "./storage";
 import {
+  DailyRequirementInput,
+  EmployeeDirectoryEntry,
   ParseScheduleImagesRequest,
   StoredSchedules,
   WeekSchedule,
@@ -23,6 +25,12 @@ const allowedOrigins = (configuredOrigins || "http://localhost:3000,http://127.0
   .map((origin) => origin.trim())
   .filter(Boolean);
 const hasConfiguredOrigins = Boolean(configuredOrigins?.trim());
+const isLocalHost =
+  host === "127.0.0.1" || host === "localhost" || host === "0.0.0.0";
+const localDevelopmentOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+const effectiveAllowedOrigins = Array.from(
+  new Set(isLocalHost ? [...allowedOrigins, ...localDevelopmentOrigins] : allowedOrigins)
+);
 
 if (!hasConfiguredOrigins) {
   console.warn(
@@ -49,7 +57,7 @@ if (!process.env.GEMINI_API_KEY) {
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || !hasConfiguredOrigins || allowedOrigins.includes(origin)) {
+      if (!origin || !hasConfiguredOrigins || effectiveAllowedOrigins.includes(origin)) {
         callback(null, true);
         return;
       }
@@ -59,6 +67,101 @@ app.use(
   })
 );
 app.use(express.json({ limit: "50mb" }));
+
+function normalizeDayLabels(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeEmployeeNames(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeEmployeeDirectory(value: unknown): EmployeeDirectoryEntry[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is EmployeeDirectoryEntry => {
+      if (!item || typeof item !== "object") return false;
+      if (typeof item.name !== "string") return false;
+      return item.branch === 1 || item.branch === 2;
+    })
+    .map((item) => ({
+      name: item.name.trim(),
+      branch: item.branch,
+      canWorkBranch1: Boolean(item.canWorkBranch1),
+      canWorkBranch2: Boolean(item.canWorkBranch2),
+    }))
+    .filter((item) => item.name.length > 0);
+}
+
+function normalizeDailyRequirements(value: unknown, dayLabels: string[]): DailyRequirementInput[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const normalized = value
+    .filter((item): item is DailyRequirementInput => {
+      if (!item || typeof item !== "object") return false;
+      if (typeof item.date !== "string") return false;
+      return Boolean(item.branch1 && item.branch2);
+    })
+    .map((item) => ({
+      date: item.date.trim(),
+      branch1: {
+        morning: Math.max(0, Number(item.branch1?.morning ?? 0) || 0),
+        evening: Math.max(0, Number(item.branch1?.evening ?? 0) || 0),
+      },
+      branch2: {
+        morning: Math.max(0, Number(item.branch2?.morning ?? 0) || 0),
+        evening: Math.max(0, Number(item.branch2?.evening ?? 0) || 0),
+      },
+    }))
+    .filter((item) => item.date.length > 0);
+
+  if (!dayLabels.length) {
+    return normalized;
+  }
+
+  const allowedDates = new Set(dayLabels);
+  return normalized.filter((item) => allowedDates.has(item.date));
+}
+
+function normalizeParseRequest(body: ParseScheduleImagesRequest | undefined) {
+  const dayLabels = normalizeDayLabels(body?.dayLabels);
+  const employeeDirectory = normalizeEmployeeDirectory(body?.employeeDirectory);
+  const employeeNames = normalizeEmployeeNames(body?.employeeNames);
+  const effectiveEmployeeNames = employeeNames.length
+    ? employeeNames
+    : employeeDirectory.map((employee) => employee.name);
+
+  return {
+    weekKey: typeof body?.weekKey === "string" ? body.weekKey.trim() : undefined,
+    weekStartIso: typeof body?.weekStartIso === "string" ? body.weekStartIso.trim() : undefined,
+    weekEndIso: typeof body?.weekEndIso === "string" ? body.weekEndIso.trim() : undefined,
+    dayLabels,
+    employeeNames: effectiveEmployeeNames,
+    employeeDirectory,
+    dailyRequirements: normalizeDailyRequirements(body?.dailyRequirements, dayLabels),
+    allowFallbackAssignment: false,
+    aiInstructions: typeof body?.aiInstructions === "string" ? body.aiInstructions.trim() : "",
+  };
+}
 
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ ok: true });
@@ -114,16 +217,23 @@ app.post(
         return;
       }
 
-      const parsed = await parseScheduleImages(images, {
-        weekKey: req.body?.weekKey,
-        weekStartIso: req.body?.weekStartIso,
-        weekEndIso: req.body?.weekEndIso,
-        dayLabels: req.body?.dayLabels,
-        employeeNames: req.body?.employeeNames,
-        employeeDirectory: req.body?.employeeDirectory,
-        dailyRequirements: req.body?.dailyRequirements,
-        allowFallbackAssignment: req.body?.allowFallbackAssignment,
-      });
+      const normalized = normalizeParseRequest(req.body);
+
+      if (normalized.dayLabels.length !== 7) {
+        res.status(400).json({
+          error: "dayLabels must contain exactly 7 ISO dates for the target week.",
+        });
+        return;
+      }
+
+      if (normalized.employeeDirectory.length === 0 && normalized.employeeNames.length === 0) {
+        res.status(400).json({
+          error: "employeeDirectory or employeeNames must contain at least one employee.",
+        });
+        return;
+      }
+
+      const parsed = await parseScheduleImages(images, normalized);
       res.json(parsed);
     } catch (error) {
       res.status(500).json({

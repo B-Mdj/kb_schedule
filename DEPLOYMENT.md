@@ -12,7 +12,7 @@ The frontend is a Next.js app in `frontend/`.
 Required environment variables:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example.com/api
+NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example.com
 ```
 
 If you deploy both apps together with Vercel Services, you can omit `NEXT_PUBLIC_API_BASE_URL` and the frontend will use the same origin under `/api` in production.
@@ -71,7 +71,7 @@ Deploy the frontend and backend separately:
 
 1. Deploy `frontend` on Vercel or any Node host.
 2. Deploy `backend` on Render, Railway, Fly.io, or another Node host.
-3. Set `NEXT_PUBLIC_API_BASE_URL` in the frontend to the public backend URL.
+3. Set `NEXT_PUBLIC_API_BASE_URL` in the frontend to the public backend origin, for example `https://your-backend-domain.example.com`.
 4. Set `FRONTEND_ORIGIN` in the backend to the public frontend URL.
 
 ## Vercel Services

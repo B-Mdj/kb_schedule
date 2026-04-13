@@ -26,7 +26,20 @@ async function parseApiBody<T>(response: Response): Promise<T | ApiErrorPayload>
 }
 
 export async function fetchApiJson<T>(input: RequestInfo | URL, init?: RequestInit) {
-  const response = await fetch(input, init);
+  let response: Response;
+
+  try {
+    response = await fetch(input, init);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(
+        "Could not reach the backend API. Check NEXT_PUBLIC_API_BASE_URL, make sure the backend is running, and verify browser access is allowed by CORS."
+      );
+    }
+
+    throw error;
+  }
+
   const payload = await parseApiBody<T>(response);
 
   if (!response.ok) {

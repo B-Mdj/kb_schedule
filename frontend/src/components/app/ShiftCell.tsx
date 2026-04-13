@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from "react";
 import { SHIFT_LABELS, getShiftClass, CellData } from "@/lib/schedule-data";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface ShiftCellProps {
@@ -16,9 +18,24 @@ function getCellOptionKey(value: CellData) {
   return `${value.prefix ?? ""}|${value.shift}|${value.coverageBranch ?? ""}`;
 }
 
+function getDisplayText(data: CellData) {
+  const shiftText = data.prefix ? `${data.prefix}${data.shift}` : data.shift;
+  return data.time ? `${shiftText}(${data.time})` : shiftText;
+}
+
 export function ShiftCell({ data, options = [data], onChange, disabled = false }: ShiftCellProps) {
   const [animating, setAnimating] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [isEditingTime, setIsEditingTime] = useState(false);
+  const [draftTime, setDraftTime] = useState(data.time ?? "");
+  const [touchLongPressTriggered, setTouchLongPressTriggered] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isEditingTime) {
+      setDraftTime(data.time ?? "");
+    }
+  }, [data.time, isEditingTime]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -48,28 +65,106 @@ export function ShiftCell({ data, options = [data], onChange, disabled = false }
   }, [data, onChange, options]);
 
   const handleClick = () => {
-    if (disabled) return;
+    if (disabled || touchLongPressTriggered) {
+      if (touchLongPressTriggered) {
+        setTouchLongPressTriggered(false);
+      }
+      return;
+    }
     cycleShift();
   };
 
-  const displayText = data.prefix ? `${data.prefix}${data.shift}` : data.shift;
+  const handleContextMenu = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+    event.preventDefault();
+    setIsEditingTime(true);
+  };
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimer !== null) {
+      window.clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  }, [longPressTimer]);
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (disabled || event.pointerType !== "touch") return;
+
+    const timer = window.setTimeout(() => {
+      setTouchLongPressTriggered(true);
+      setIsEditingTime(true);
+      setLongPressTimer(null);
+    }, 450);
+
+    setLongPressTimer(timer);
+  };
+
+  const handlePointerUp = () => {
+    clearLongPressTimer();
+  };
+
+  const handlePointerCancel = () => {
+    clearLongPressTimer();
+  };
+
+  const commitTime = useCallback(() => {
+    const normalized = draftTime.trim();
+    onChange({
+      ...data,
+      time: normalized || undefined,
+    });
+    setIsEditingTime(false);
+  }, [data, draftTime, onChange]);
+
+  const displayText = getDisplayText(data);
+  if (isEditingTime && !disabled) {
+    return (
+      <div
+        className={cn(
+          "flex h-full min-h-12 w-full items-center justify-center rounded-lg p-1 sm:min-h-14",
+          getShiftClass(data.shift)
+        )}
+      >
+        <Input
+          autoFocus
+          value={draftTime}
+          onChange={(event) => setDraftTime(event.target.value)}
+          onBlur={commitTime}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              commitTime();
+            }
+            if (event.key === "Escape") {
+              setDraftTime(data.time ?? "");
+              setIsEditingTime(false);
+            }
+          }}
+          placeholder="11:00"
+          className="h-7 border-white/50 bg-white/85 px-2 text-center text-xs font-semibold text-foreground"
+        />
+      </div>
+    );
+  }
+
   const button = (
     <button
       type="button"
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerCancel}
+      onPointerCancel={handlePointerCancel}
       disabled={disabled}
       className={cn(
-        "shift-cell relative flex h-full min-h-12 w-full flex-col items-center justify-center rounded-lg font-semibold text-sm transition-transform transition-shadow duration-150 sm:min-h-14 sm:text-base",
+        "shift-cell relative flex h-full min-h-12 w-full flex-col items-center justify-center rounded-lg px-1 font-semibold text-sm transition-transform transition-shadow duration-150 sm:min-h-14 sm:text-base",
         getShiftClass(data.shift),
         !disabled && "cursor-pointer hover:-translate-y-0.5 hover:shadow-md",
         disabled && "cursor-default",
         animating && "animate-cell-pop"
       )}
     >
-      <span className="text-base font-bold sm:text-lg">{displayText}</span>
-      {data.time && (
-        <span className="text-[10px] font-normal opacity-70 mt-0.5">{data.time}</span>
-      )}
+      <span className="text-center text-[11px] font-bold leading-tight sm:text-sm">{displayText}</span>
     </button>
   );
 
