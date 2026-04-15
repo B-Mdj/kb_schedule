@@ -1,3 +1,5 @@
+import "server-only";
+
 import { ParsedSchedulePayload, UploadedImagePayload } from "./types";
 
 const GEMINI_API_URL =

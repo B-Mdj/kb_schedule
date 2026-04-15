@@ -33,7 +33,7 @@ export async function fetchApiJson<T>(input: RequestInfo | URL, init?: RequestIn
   } catch (error) {
     if (error instanceof TypeError) {
       throw new Error(
-        "Could not reach the backend API. Check NEXT_PUBLIC_API_BASE_URL, make sure the backend is running, and verify browser access is allowed by CORS."
+        "Could not reach the API route. Check NEXT_PUBLIC_API_BASE_URL and verify your Next.js app is running."
       );
     }
 

@@ -1,26 +1,49 @@
+import "server-only";
+
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { get, put } from "@vercel/blob";
 import { StoredSchedules, WeekSchedule } from "./types";
 
 const EMPTY_SCHEDULES: StoredSchedules = { schedulesByWeek: {} };
-const dataDir = path.join(__dirname, "..", "data");
-const schedulesPath = path.join(dataDir, "schedules.json");
 const blobPath = process.env.SCHEDULES_BLOB_PATH || "kb-schedule/schedules.json";
 const hasBlobStorage = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+const tmpSchedulesPath = path.join(os.tmpdir(), "kb-schedule", "schedules.json");
 
 type StoredSchedulesSnapshot = {
   data: StoredSchedules;
   etag?: string;
 };
 
+function resolveLocalSchedulesPath() {
+  const candidates = [
+    path.join(process.cwd(), "backend", "data", "schedules.json"),
+    path.join(process.cwd(), "..", "backend", "data", "schedules.json"),
+    path.join(process.cwd(), "data", "schedules.json"),
+  ];
+
+  if (!process.env.VERCEL) {
+    const repoPath = candidates.find((candidate) => fs.existsSync(path.dirname(candidate)));
+    if (repoPath) {
+      return repoPath;
+    }
+  }
+
+  return tmpSchedulesPath;
+}
+
+const localSchedulesPath = resolveLocalSchedulesPath();
+
 function ensureLocalStorage() {
+  const dataDir = path.dirname(localSchedulesPath);
+
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  if (!fs.existsSync(schedulesPath)) {
-    fs.writeFileSync(schedulesPath, JSON.stringify(EMPTY_SCHEDULES, null, 2));
+  if (!fs.existsSync(localSchedulesPath)) {
+    fs.writeFileSync(localSchedulesPath, JSON.stringify(EMPTY_SCHEDULES, null, 2));
   }
 }
 
@@ -38,13 +61,13 @@ function normalizeStoredSchedules(value: unknown): StoredSchedules {
 
 function readLocalSchedules(): StoredSchedules {
   ensureLocalStorage();
-  const raw = fs.readFileSync(schedulesPath, "utf8");
+  const raw = fs.readFileSync(localSchedulesPath, "utf8");
   return normalizeStoredSchedules(JSON.parse(raw));
 }
 
 function writeLocalSchedules(data: StoredSchedules) {
   ensureLocalStorage();
-  fs.writeFileSync(schedulesPath, JSON.stringify(data, null, 2));
+  fs.writeFileSync(localSchedulesPath, JSON.stringify(data, null, 2));
 }
 
 function localSchedulesContainData(data: StoredSchedules) {
